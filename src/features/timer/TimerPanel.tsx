@@ -1,5 +1,5 @@
 import { msToRoundedMinutes } from '@/domain';
-import { useTimer } from './useTimer';
+import { useTimerContext } from './TimerContext';
 import styles from './TimerPanel.module.css';
 
 function formatClock(ms: number): string {
@@ -25,7 +25,7 @@ function formatDuration(ms: number): string {
  * interval, and the honesty check-in can be ignored (brief section 4).
  */
 export function TimerPanel() {
-  const timer = useTimer();
+  const timer = useTimerContext();
   const { state } = timer;
   const overtime = timer.remainingMs < 0;
 

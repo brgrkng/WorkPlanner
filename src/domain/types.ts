@@ -1,3 +1,4 @@
+import type { RoutineBlockSnapshot } from './routine';
 import type { DayKey } from './time/dayKey';
 
 /** Answer to the per-pomodoro social-media honesty check-in (brief section 6.2).
@@ -77,6 +78,13 @@ export interface DayLog {
    *  Always 0 for an offday. */
   readonly allocatedMinutes: number;
 
+  /**
+   * The routine as it stood on this day, with per-block completion. Copied in
+   * at creation so a later template edit cannot rewrite history (brief
+   * section 7) — never render a past day from the live template.
+   */
+  readonly routine: readonly RoutineBlockSnapshot[];
+
   readonly workSessions: readonly WorkSession[];
   readonly offlineReports: readonly OfflineReport[];
 
@@ -105,6 +113,9 @@ export interface Settings {
   readonly allocatedMinutesPerWorkday: number;
   readonly workStreakThresholdMinutes: number;
   readonly rolloverHour: number;
+  /** Shown as context on the routine and dashboard. Only one project is active
+   *  at a time; time is never split per project (brief section 6.4). */
+  readonly currentProject: string;
 }
 
 export type DayLogIndex = ReadonlyMap<DayKey, DayLog>;

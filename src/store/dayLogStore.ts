@@ -1,16 +1,19 @@
 import {
   createDayLog,
   dayKeyOf,
+  defaultRoutineTemplate,
   defaultSettings,
-  parseDayKey,
+  migrateDayLog,
   type DayKey,
   type DayLog,
   type DayLogIndex,
+  type RoutineTemplate,
   type Settings,
 } from '@/domain';
 import type { StorageAdapter } from './adapter';
 
 const SETTINGS_KEY = 'settings';
+const TEMPLATE_KEY = 'routineTemplate';
 
 export interface StoreOptions {
   /** Injected so tests and the domain layer never read the wall clock directly. */
@@ -35,6 +38,7 @@ export type StoreListener = () => void;
 export class DayLogStore {
   private readonly cache = new Map<DayKey, DayLog>();
   private currentSettings: Settings = defaultSettings();
+  private currentTemplate: RoutineTemplate = defaultRoutineTemplate(Date.now());
   private readonly listeners = new Set<StoreListener>();
 
   /** Keys changed since the last successful sync. Consumed by the Firestore
@@ -63,22 +67,26 @@ export class DayLogStore {
 
   /** Loads everything into memory. Call once at startup, before first render. */
   async hydrate(): Promise<void> {
-    const [logs, settings] = await Promise.all([
-      this.adapter.getAll<DayLog>('dayLogs'),
+    const [logs, settings, template] = await Promise.all([
+      this.adapter.getAll<unknown>('dayLogs'),
       this.adapter.get<Settings>('meta', SETTINGS_KEY),
+      this.adapter.get<RoutineTemplate>('meta', TEMPLATE_KEY),
     ]);
 
     this.cache.clear();
-    for (const log of logs) {
-      // A corrupt key must not take down the whole app: skip it and keep going.
-      try {
-        this.cache.set(parseDayKey(log.dayKey), log);
-      } catch (error) {
-        this.lastError = error;
+    for (const raw of logs) {
+      // Records from an older schema are upgraded rather than dropped; one
+      // unreadable record must not take down the app or lose the other days.
+      const log = migrateDayLog(raw);
+      if (log === null) {
+        this.lastError = new Error('Skipped an unreadable day log');
+        continue;
       }
+      this.cache.set(log.dayKey, log);
     }
 
     if (settings !== undefined) this.currentSettings = { ...defaultSettings(), ...settings };
+    if (template !== undefined && Array.isArray(template.blocks)) this.currentTemplate = template;
     this.hydrated = true;
     this.emit();
   }
@@ -122,6 +130,12 @@ export class DayLogStore {
     return this.currentSettings;
   }
 
+  /** The live routine template. Only ever applied to days created from now on;
+   *  past days render from their own snapshot (brief section 7). */
+  get template(): RoutineTemplate {
+    return this.currentTemplate;
+  }
+
   get(dayKey: DayKey): DayLog | undefined {
     return this.cache.get(dayKey);
   }
@@ -150,11 +164,10 @@ export class DayLogStore {
     const existing = this.cache.get(dayKey);
     if (existing !== undefined) return existing;
 
-    const created = createDayLog(
-      dayKey,
-      this.now(),
-      this.currentSettings.allocatedMinutesPerWorkday,
-    );
+    const created = createDayLog(dayKey, this.now(), {
+      allocatedMinutesPerWorkday: this.currentSettings.allocatedMinutesPerWorkday,
+      template: this.currentTemplate,
+    });
     this.commit(created);
     return created;
   }
@@ -177,6 +190,18 @@ export class DayLogStore {
     this.enqueue(() => this.adapter.put('meta', SETTINGS_KEY, settings));
     this.emit();
     return settings;
+  }
+
+  /**
+   * Replaces the routine template. Deliberately does not touch any existing day
+   * log — the forward-only rule from brief section 7 is enforced here, by the
+   * template simply not being part of how a stored day is read.
+   */
+  setTemplate(template: RoutineTemplate): RoutineTemplate {
+    this.currentTemplate = template;
+    this.enqueue(() => this.adapter.put('meta', TEMPLATE_KEY, template));
+    this.emit();
+    return template;
   }
 
   private commit(log: DayLog): void {

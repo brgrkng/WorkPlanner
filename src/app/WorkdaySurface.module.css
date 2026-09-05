@@ -1,0 +1,27 @@
+.offDay {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0 0.25rem;
+}
+
+.link {
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  padding: 0;
+}
+
+.link:hover {
+  color: var(--text);
+}
+
+.note {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}

@@ -28,4 +28,4 @@ export const NAP_MINUTES = 20;
 export const MS_PER_MINUTE = 60_000;
 
 /** Bumped whenever the persisted shape changes, so migrations can be written. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;

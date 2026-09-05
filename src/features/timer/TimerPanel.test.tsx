@@ -5,6 +5,7 @@ import { actualWorkedMs, msToRoundedMinutes, parseDayKey, type DayKey } from '@/
 import { StoreProvider } from '@/app/StoreProvider';
 import { DayLogStore, MemoryAdapter } from '@/store';
 import { TimerPanel } from './TimerPanel';
+import { TimerProvider } from './TimerProvider';
 import { TIMER_STORAGE_KEY, type TimerSnapshot } from './timerPersistence';
 import { IDLE } from './timerState';
 
@@ -18,7 +19,9 @@ let user: ReturnType<typeof userEvent.setup>;
 async function renderPanel() {
   const result = render(
     <StoreProvider store={store}>
-      <TimerPanel />
+      <TimerProvider>
+        <TimerPanel />
+      </TimerProvider>
     </StoreProvider>,
   );
   await screen.findByRole('button', { name: /start work/i });
