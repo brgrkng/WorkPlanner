@@ -23,6 +23,7 @@ export function defaultSettings(): Settings {
     workStreakThresholdMinutes: WORK_STREAK_THRESHOLD_MINUTES,
     rolloverHour: ROLLOVER_HOUR,
     currentProject: 'Trading bot',
+    updatedAt: 0,
   };
 }
 

@@ -116,6 +116,8 @@ export interface Settings {
   /** Shown as context on the routine and dashboard. Only one project is active
    *  at a time; time is never split per project (brief section 6.4). */
   readonly currentProject: string;
+  /** For last-write-wins merging when the same account is used elsewhere. */
+  readonly updatedAt: number;
 }
 
 export type DayLogIndex = ReadonlyMap<DayKey, DayLog>;

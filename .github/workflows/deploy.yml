@@ -33,8 +33,21 @@ jobs:
 
       - run: npm run test -- --run
 
-      # M6 adds the Firebase config injection here, writing a .env from
-      # repository secrets before the build. Nothing to inject yet.
+      # Firebase config is injected from repository secrets at build time so it
+      # never appears in the public repo source. See PLANNER_HANDOFF_BRIEF.md
+      # section 9. If the secrets are unset the file is empty and the app simply
+      # builds in local-only mode — the deploy still succeeds.
+      - name: Write .env from repository secrets
+        run: |
+          {
+            echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}"
+            echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}"
+            echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}"
+            echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}"
+            echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}"
+            echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}"
+          } > .env
+
       - run: npm run build
 
       - uses: actions/upload-pages-artifact@v3

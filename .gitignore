@@ -2,6 +2,9 @@
 PLANNER_HANDOFF_BRIEF.md
 CLAUDE.md
 SESSION.md
+# Setup guide, kept local for consistency with the above. It contains no
+# secrets, so committing it is safe if you'd rather have it in the repo.
+FIREBASE_SETUP.md
 
 # Firebase config — injected at build time from GitHub repository secrets.
 # Never commit these; see PLANNER_HANDOFF_BRIEF.md §9.

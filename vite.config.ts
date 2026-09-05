@@ -6,6 +6,12 @@ import { defineConfig } from 'vitest/config';
 // the repo name or every asset 404s on Pages.
 export default defineConfig({
   base: '/WorkPlanner/',
+  build: {
+    // The Firebase SDK is a ~600kB chunk by nature. It is code-split and loaded
+    // only when Firebase is actually configured, so it never delays first paint
+    // — the warning would just be noise in CI.
+    chunkSizeWarningLimit: 700,
+  },
   plugins: [react()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },

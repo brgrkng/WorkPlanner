@@ -1,0 +1,57 @@
+.status,
+.muted {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.error {
+  font-size: 0.75rem;
+  color: #e66767;
+}
+
+.link {
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--muted);
+  text-decoration: underline;
+  padding: 0;
+}
+
+.link:hover {
+  color: var(--text);
+}
+
+.form {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.input {
+  font: inherit;
+  font-size: 0.75rem;
+  width: 9rem;
+  padding: 0.25rem 0.4375rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.button {
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 0.25rem 0.625rem;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
