@@ -1,0 +1,45 @@
+# Local planning & tracking docs — deliberately not committed
+PLANNER_HANDOFF_BRIEF.md
+CLAUDE.md
+SESSION.md
+
+# Firebase config — injected at build time from GitHub repository secrets.
+# Never commit these; see PLANNER_HANDOFF_BRIEF.md §9.
+.env
+.env.*
+!.env.example
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+dist-ssr/
+build/
+
+# Test & tooling caches
+coverage/
+.vite/
+.vitest/
+*.tsbuildinfo
+.eslintcache
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code local overrides
+.claude/settings.local.json
