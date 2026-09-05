@@ -2,13 +2,16 @@ import { MS_PER_MINUTE } from './constants';
 import type { DayLog, OfflineReport, WorkSession } from './types';
 
 /**
- * Real elapsed time, not the nominal interval length. A pomodoro the user let
- * run past 25 minutes accrues what it actually ran (brief section 4).
+ * Real worked time: the wall-clock span minus any time spent paused.
  *
- * Clamped at zero: a clock adjustment mid-session must never subtract time.
+ * Not the nominal interval length — a pomodoro the user let run past 25 minutes
+ * accrues what it actually ran (brief section 4).
+ *
+ * Clamped at zero, so neither a clock adjustment mid-session nor a corrupt
+ * pause total can ever subtract from the day.
  */
 export function sessionMs(session: WorkSession): number {
-  return Math.max(0, session.endedAt - session.startedAt);
+  return Math.max(0, session.endedAt - session.startedAt - session.pausedMs);
 }
 
 export function offlineReportMs(report: OfflineReport): number {

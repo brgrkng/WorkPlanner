@@ -32,6 +32,19 @@ describe('sessionMs', () => {
   it('handles a zero-length session', () => {
     expect(sessionMs(session(0))).toBe(0);
   });
+
+  // Pausing must be honest in both directions: the real span is preserved on
+  // the record, but paused time is not credited as work.
+  it('excludes paused time', () => {
+    const paused = session(20, { pausedMs: 30 * MIN });
+    expect(paused.endedAt - paused.startedAt).toBe(50 * MIN);
+    expect(sessionMs(paused)).toBe(20 * MIN);
+  });
+
+  it('never goes negative if the pause total is corrupt', () => {
+    const bad = { ...session(10), pausedMs: 999 * MIN };
+    expect(sessionMs(bad)).toBe(0);
+  });
 });
 
 describe('pomodoroMs', () => {

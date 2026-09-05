@@ -1,6 +1,7 @@
 export * from './constants';
 export * from './factories';
 export * from './logIndex';
+export * from './pomodoro';
 export * from './streak';
 export * from './time/dayKey';
 export * from './time/ranges';

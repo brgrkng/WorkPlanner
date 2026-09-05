@@ -1,0 +1,146 @@
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.75rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.notice {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 6px;
+  background: rgba(110, 168, 254, 0.1);
+  border: 1px solid rgba(110, 168, 254, 0.3);
+  font-size: 0.875rem;
+}
+
+.readout {
+  text-align: center;
+}
+
+.clock {
+  font-size: 3.5rem;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Overtime is information, not an error — a shift in weight, not a red alarm. */
+.clockOvertime {
+  color: var(--accent);
+}
+
+.status {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.controls {
+  display: flex;
+  gap: 0.625rem;
+  justify-content: center;
+}
+
+.primary,
+.secondary,
+.link {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0.5rem 1.125rem;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0d1117;
+  font-weight: 500;
+}
+
+.primary:hover {
+  background: #86b7fe;
+}
+
+.secondary {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.secondary:hover {
+  border-color: var(--muted);
+}
+
+.link {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 0.5rem 0.5rem;
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: var(--text);
+}
+
+.suggestion {
+  display: flex;
+  justify-content: center;
+}
+
+.checkIn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.checkInLabel {
+  font-size: 0.9375rem;
+}
+
+.checkInActions {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.meta {
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.metaItem {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.meta dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.meta dd {
+  margin: 0;
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}

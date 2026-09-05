@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { App } from './App';
 
 describe('App', () => {
-  it('renders the app name', () => {
+  // No indexedDB in this environment, so this also exercises the MemoryAdapter
+  // fallback: the app must still start when storage is unavailable.
+  it('renders the timer once the store has hydrated', async () => {
     render(<App />);
-    expect(screen.getByRole('heading', { name: 'WorkPlanner' })).toBeInTheDocument();
+
+    expect(await screen.findByRole('heading', { name: 'WorkPlanner' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start work/i })).toBeInTheDocument();
   });
 });

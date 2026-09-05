@@ -1,17 +1,17 @@
 .main {
-  max-width: 46rem;
+  max-width: 40rem;
   margin: 0 auto;
-  padding: 6rem 2rem;
+  padding: 4rem 2rem;
+}
+
+.header {
+  margin-bottom: 1.5rem;
 }
 
 .title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-}
-
-.subtitle {
-  margin: 0.5rem 0 0;
   color: var(--muted);
 }

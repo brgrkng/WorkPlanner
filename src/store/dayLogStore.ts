@@ -48,6 +48,9 @@ export class DayLogStore {
   private queue: Promise<void> = Promise.resolve();
 
   private hydrated = false;
+  /** Bumped on every change. React subscribes to this rather than to the cache
+   *  Map, which is mutated in place and so cannot be compared by reference. */
+  private revision = 0;
   private lastError: unknown = undefined;
   private readonly now: () => number;
 
@@ -103,7 +106,13 @@ export class DayLogStore {
     return () => this.listeners.delete(listener);
   }
 
+  /** Monotonic change counter for `useSyncExternalStore`. */
+  get version(): number {
+    return this.revision;
+  }
+
   private emit(): void {
+    this.revision += 1;
     for (const listener of this.listeners) listener();
   }
 

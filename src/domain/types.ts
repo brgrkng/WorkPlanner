@@ -21,6 +21,21 @@ export interface WorkSession {
   readonly endedAt: number;
   readonly source: WorkSessionSource;
   readonly distractionFree: DistractionAnswer;
+
+  /**
+   * Total time this session spent paused. Subtracted from the wall-clock span
+   * so that pausing is honest in both directions: the real start and end
+   * instants are preserved, but paused time is not credited as work.
+   */
+  readonly pausedMs: number;
+
+  /**
+   * Whether the session reached the full work interval configured at the time
+   * it ended. Snapshotted rather than derived so that raising the interval
+   * later cannot retroactively un-complete past pomodoros. Drives the
+   * long-break cadence (brief section 4).
+   */
+  readonly completedFullInterval: boolean;
   /** True when the session was closed by crash recovery rather than by the
    *  user, i.e. its end is the last heartbeat before power loss. */
   readonly recovered: boolean;

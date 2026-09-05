@@ -26,16 +26,22 @@ export function session(
     startedAt?: number;
     recovered?: boolean;
     source?: WorkSession['source'];
+    pausedMs?: number;
+    completedFullInterval?: boolean;
   } = {},
 ): WorkSession {
   const startedAt = options.startedAt ?? NOW;
+  const pausedMs = options.pausedMs ?? 0;
   return {
     id: `session-${(sessionCounter += 1)}`,
     startedAt,
-    endedAt: startedAt + minutes * 60_000,
+    // Worked `minutes`, plus any paused time on top of the wall-clock span.
+    endedAt: startedAt + minutes * 60_000 + pausedMs,
     source: options.source ?? 'pomodoro',
     distractionFree: options.distractionFree ?? 'unanswered',
     recovered: options.recovered ?? false,
+    pausedMs,
+    completedFullInterval: options.completedFullInterval ?? true,
   };
 }
 
