@@ -174,6 +174,8 @@ export function recoverFromSnapshot(
       recovered: true,
       pausedMs: paused,
       completedFullInterval: reachedFullInterval(worked, settings),
+      taskId: state.taskId,
+      taskName: state.taskName,
     },
     dayKey: state.dayKey,
     clamped,

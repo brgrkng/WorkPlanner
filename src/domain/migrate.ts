@@ -25,7 +25,9 @@ export function migrateDayLog(raw: unknown): DayLog | null {
     kind: record.kind === 'offday' ? 'offday' : 'workday',
     excused: record.excused === true,
     allocatedMinutes: numberOr(record.allocatedMinutes, 0),
-    routine: Array.isArray(record.routine) ? (record.routine as RoutineBlockSnapshot[]) : [],
+    routine: Array.isArray(record.routine)
+      ? (record.routine as RoutineBlockSnapshot[]).map(migrateRoutineBlock)
+      : [],
     workSessions: Array.isArray(record.workSessions)
       ? (record.workSessions as WorkSession[]).map(migrateSession)
       : [],
@@ -41,13 +43,24 @@ export function migrateDayLog(raw: unknown): DayLog | null {
   };
 }
 
-/** `pausedMs` and `completedFullInterval` arrived with the timer in M2. */
+/**
+ * `pausedMs` and `completedFullInterval` arrived with the timer in M2;
+ * `taskId` and `taskName` with task selection in M8. Sessions logged before
+ * tasks existed simply have no task, which is a legitimate state.
+ */
 function migrateSession(session: WorkSession): WorkSession {
   return {
     ...session,
     pausedMs: numberOr(session.pausedMs, 0),
     completedFullInterval: session.completedFullInterval === true,
+    taskId: typeof session.taskId === 'string' ? session.taskId : null,
+    taskName: typeof session.taskName === 'string' ? session.taskName : '',
   };
+}
+
+/** Routine snapshots written before work blocks were distinguishable. */
+function migrateRoutineBlock(block: RoutineBlockSnapshot): RoutineBlockSnapshot {
+  return { ...block, isWorkBlock: block.isWorkBlock === true };
 }
 
 function numberOr(value: unknown, fallback: number): number {

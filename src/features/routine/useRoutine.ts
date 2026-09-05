@@ -155,7 +155,14 @@ export function useRoutine(): RoutineView {
       store.setTemplate(
         addBlock(
           store.template,
-          { id: newId(), name: trimmed, startMinute: null, durationMinutes: null, note: '' },
+          {
+            id: newId(),
+            name: trimmed,
+            startMinute: null,
+            durationMinutes: null,
+            note: '',
+            isWorkBlock: false,
+          },
           Date.now(),
         ),
       );

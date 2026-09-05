@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { parseDayKey, updateBlock, type DayKey } from '@/domain';
+import { SCHEMA_VERSION, parseDayKey, updateBlock, type DayKey } from '@/domain';
 import { NOW } from '@/test/fixtures';
 import { MemoryAdapter } from './adapter';
 import { DayLogStore } from './dayLogStore';
@@ -114,7 +114,21 @@ describe('migration of older records', () => {
     expect(log?.routine).toEqual([]);
     expect(log?.workSessions[0]?.pausedMs).toBe(0);
     expect(log?.workSessions[0]?.completedFullInterval).toBe(false);
-    expect(log?.schemaVersion).toBe(2);
+    // Logged before tasks existed: no task is a legitimate state, not a gap.
+    expect(log?.workSessions[0]?.taskId).toBeNull();
+    expect(log?.workSessions[0]?.taskName).toBe('');
+    expect(log?.schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('defaults routine blocks written before work items existed', async () => {
+    await adapter.put('dayLogs', SUNDAY, {
+      dayKey: SUNDAY,
+      routine: [{ id: 'tea', name: 'Tea', startMinute: null, durationMinutes: 10, completedAt: null }],
+    });
+
+    const reopened = new DayLogStore(adapter, { now: () => NOW });
+    await reopened.hydrate();
+    expect(reopened.get(SUNDAY)?.routine[0]?.isWorkBlock).toBe(false);
   });
 
   it('skips a record with no usable day key but keeps the rest', async () => {

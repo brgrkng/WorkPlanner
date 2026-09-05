@@ -17,7 +17,8 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
     <div className={styles.editor}>
       <p className={styles.editorNote}>
         Changes apply to future days. Days already logged, including today, keep the routine they
-        were created with.
+        were created with. Blocks marked <strong>work</strong> are the ones the timer can be
+        pointed at.
       </p>
 
       <ul className={styles.editorList}>
@@ -54,6 +55,17 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
                 })
               }
             />
+            <label className={styles.workFlag} title="Selectable as a timer task">
+              <input
+                type="checkbox"
+                checked={block.isWorkBlock}
+                aria-label={`${block.name} is work inside the 8-hour block`}
+                onChange={(event) =>
+                  routine.editRoutineBlock(block.id, { isWorkBlock: event.target.checked })
+                }
+              />
+              <span>work</span>
+            </label>
             <span className={styles.editorActions}>
               <button
                 type="button"

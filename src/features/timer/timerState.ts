@@ -15,6 +15,9 @@ export interface TimerState {
   readonly phase: TimerPhase;
   readonly breakKind: BreakKind | null;
   readonly sessionId: string | null;
+  /** The routine block this session is being spent on. */
+  readonly taskId: string | null;
+  readonly taskName: string;
   /** Logical day this session belongs to, captured at start so a session that
    *  crosses the 04:00 rollover is still credited to the day it began. */
   readonly dayKey: DayKey | null;
@@ -34,6 +37,8 @@ export const IDLE: TimerState = {
   phase: 'idle',
   breakKind: null,
   sessionId: null,
+  taskId: null,
+  taskName: '',
   dayKey: null,
   phaseStartedAt: null,
   runningSince: null,
@@ -71,17 +76,25 @@ export function remainingMs(state: TimerState, now: number, targetMs: number): n
   return targetMs - elapsedMs(state, now);
 }
 
+export interface TaskRef {
+  readonly id: string | null;
+  readonly name: string;
+}
+
 export function startWork(
   state: TimerState,
   now: number,
   sessionId: string,
   dayKey: DayKey,
+  task: TaskRef = { id: null, name: '' },
 ): TimerState {
   if (state.phase === 'work') return state;
   return {
     phase: 'work',
     breakKind: null,
     sessionId,
+    taskId: task.id,
+    taskName: task.name,
     dayKey,
     phaseStartedAt: now,
     runningSince: now,
@@ -165,6 +178,8 @@ export function stopWork(
       recovered: options.recovered ?? false,
       pausedMs: paused,
       completedFullInterval: reachedFullInterval(worked, settings),
+      taskId: state.taskId,
+      taskName: state.taskName,
     },
   };
 }

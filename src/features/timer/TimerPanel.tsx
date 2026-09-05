@@ -43,6 +43,22 @@ export function TimerPanel() {
         </div>
       ) : null}
 
+      {timer.tasks.length > 0 ? (
+        <div className={styles.tasks} role="group" aria-label="What are you working on">
+          {timer.tasks.map((task) => (
+            <button
+              key={task.id}
+              type="button"
+              aria-pressed={timer.selectedTaskId === task.id}
+              className={timer.selectedTaskId === task.id ? styles.taskActive : styles.task}
+              onClick={() => timer.selectTask(task.id)}
+            >
+              {task.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className={styles.readout}>
         <div
           className={`${styles.clock} ${overtime ? styles.clockOvertime : ''}`}

@@ -2,12 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   breakDurationMs,
   completedPomodoroCount,
+  defaultTask,
+  workBlocks,
   nextBreakKind,
   pomodorosUntilLongBreak,
   replaceSession,
   type BreakKind,
   type DayKey,
   type DistractionAnswer,
+  type RoutineBlockSnapshot,
   type WorkSession,
 } from '@/domain';
 import { MS_PER_MINUTE } from '@/domain';
@@ -50,6 +53,10 @@ export interface PendingCheckIn {
 
 export interface TimerView {
   readonly state: TimerState;
+  /** Work blocks from today's routine — the tasks the timer can point at. */
+  readonly tasks: readonly RoutineBlockSnapshot[];
+  readonly selectedTaskId: string | null;
+  readonly selectedTaskName: string;
   readonly now: number;
   readonly elapsedMs: number;
   readonly pausedMs: number;
@@ -67,6 +74,7 @@ export interface TimerView {
   /** Set when a crashed session was auto-credited on startup. */
   readonly recoveredMs: number | null;
 
+  selectTask: (taskId: string | null) => void;
   start: () => void;
   pauseResume: () => void;
   stop: () => void;
@@ -96,6 +104,7 @@ export function useTimer(): TimerView {
   const [state, setState] = useState<TimerState>(IDLE);
   const [now, setNow] = useState<number>(() => Date.now());
   const [pendingCheckIn, setPendingCheckIn] = useState<PendingCheckIn | null>(null);
+  const [chosenTaskId, setChosenTaskId] = useState<string | null>(null);
   const [recoveredMs, setRecoveredMs] = useState<number | null>(null);
 
   const storageRef = useRef<KeyValueStorage | null | undefined>(undefined);
@@ -104,6 +113,23 @@ export function useTimer(): TimerView {
 
   const settings = store.settings;
   const recoveredRef = useRef(false);
+
+  // Only work blocks are selectable: the nap, tea and gaming are part of the
+  // day but not part of the 8-hour window, so pointing the timer at them would
+  // be meaningless.
+  const todayKey = store.today();
+  // ensureDay rather than get: on the first interaction of the day the log may
+  // not exist yet, and the task list must still be there to start from.
+  const todayRoutine = store.ensureDay(todayKey).routine;
+  const tasks = workBlocks(todayRoutine);
+
+  // Default to the first work block rather than nothing, so starting never
+  // requires a decision first — activation energy is the thing to protect.
+  const activeTaskId =
+    chosenTaskId !== null && tasks.some((task) => task.id === chosenTaskId)
+      ? chosenTaskId
+      : (defaultTask(todayRoutine)?.id ?? null);
+  const activeTaskName = tasks.find((task) => task.id === activeTaskId)?.name ?? '';
 
   // --- startup recovery ------------------------------------------------------
   useEffect(() => {
@@ -163,8 +189,10 @@ export function useTimer(): TimerView {
     setNow(at);
     setPendingCheckIn(null);
     setRecoveredMs(null);
-    setState((current) => startWork(current, at, id, dayKey));
-  }, [store]);
+    setState((current) =>
+      startWork(current, at, id, dayKey, { id: activeTaskId, name: activeTaskName }),
+    );
+  }, [activeTaskId, activeTaskName, store]);
 
   const pauseResume = useCallback(() => {
     const at = Date.now();
@@ -190,6 +218,39 @@ export function useTimer(): TimerView {
     if (session !== null && state.dayKey !== null) commitSession(session, state.dayKey);
     setState(next);
   }, [commitSession, state, store]);
+
+  /**
+   * Points the timer at a different task.
+   *
+   * Switching mid-session closes the current session and immediately opens a
+   * new one, so the time already spent stays attributed to the task it was
+   * actually spent on. The alternative — relabelling the whole session — would
+   * quietly misreport the part that came before the switch.
+   *
+   * The cost is that the pomodoro interval restarts, which is arguably right:
+   * you did just change context.
+   */
+  const selectTask = useCallback(
+    (taskId: string | null) => {
+      if (taskId === activeTaskId) return;
+      setChosenTaskId(taskId);
+
+      if (state.phase !== 'work') return;
+
+      const at = Date.now();
+      setNow(at);
+      const { session } = stopWork(state, at, store.settings);
+      if (session !== null && state.dayKey !== null) {
+        store.update(state.dayKey, (log) => ({
+          ...log,
+          workSessions: [...log.workSessions, session],
+        }));
+      }
+      const name = tasks.find((task) => task.id === taskId)?.name ?? '';
+      setState(startWork(IDLE, at, newId(), store.today(), { id: taskId, name }));
+    },
+    [activeTaskId, state, store, tasks],
+  );
 
   const beginBreak = useCallback(
     (kind?: BreakKind) => {
@@ -237,6 +298,9 @@ export function useTimer(): TimerView {
 
   return {
     state,
+    tasks,
+    selectedTaskId: state.phase === 'work' ? state.taskId : activeTaskId,
+    selectedTaskName: state.phase === 'work' ? state.taskName : activeTaskName,
     now,
     elapsedMs: elapsed,
     pausedMs: state.phase === 'idle' ? 0 : totalPausedMs(state, now),
@@ -250,6 +314,7 @@ export function useTimer(): TimerView {
     breakSuggested: state.phase === 'idle' && pendingCheckIn !== null,
     pendingCheckIn,
     recoveredMs,
+    selectTask,
     start,
     pauseResume,
     stop,

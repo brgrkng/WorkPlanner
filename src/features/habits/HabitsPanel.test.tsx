@@ -245,6 +245,8 @@ describe('excused days', () => {
           recovered: false,
           pausedMs: 0,
           completedFullInterval: true,
+          taskId: null,
+          taskName: '',
         },
       ],
     }));

@@ -23,6 +23,14 @@ export interface WorkSession {
   readonly source: WorkSessionSource;
   readonly distractionFree: DistractionAnswer;
 
+  /** Routine block this session was spent on, or null if none was selected. */
+  readonly taskId: string | null;
+  /**
+   * The task's name at the time. Snapshotted like everything else, so renaming
+   * or deleting a routine block never rewrites what a past session says.
+   */
+  readonly taskName: string;
+
   /**
    * Total time this session spent paused. Subtracted from the wall-clock span
    * so that pausing is honest in both directions: the real start and end

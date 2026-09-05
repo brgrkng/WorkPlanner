@@ -72,6 +72,7 @@ export function DayDetail({ dayKey, log, onExcusedChange }: Props) {
               <span className={styles.sessionTime}>{formatTime(session.startedAt)}</span>
               <span>{formatDuration(session.endedAt - session.startedAt - session.pausedMs)}</span>
               <span className={styles.muted}>
+                {session.taskName !== '' ? `${session.taskName} · ` : ''}
                 {session.distractionFree === 'yes'
                   ? 'focused'
                   : session.distractionFree === 'no'

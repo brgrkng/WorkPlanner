@@ -15,6 +15,15 @@ export interface RoutineBlock {
   /** Offers a silent visual countdown of this length; null means no timer. */
   readonly durationMinutes: number | null;
   readonly note: string;
+  /**
+   * Whether this is work inside the 8-hour block, and so selectable as the
+   * task the pomodoro timer is tracking.
+   *
+   * An explicit flag rather than inferring position between "workday start" and
+   * "workday end": blocks can be renamed, reordered and deleted, so position
+   * would silently stop meaning what it did.
+   */
+  readonly isWorkBlock: boolean;
 }
 
 export interface RoutineTemplate {
@@ -36,6 +45,7 @@ export interface RoutineBlockSnapshot {
   readonly startMinute: number | null;
   readonly durationMinutes: number | null;
   readonly completedAt: number | null;
+  readonly isWorkBlock: boolean;
 }
 
 export const MINUTES_PER_DAY = 24 * 60;
@@ -71,7 +81,8 @@ export function defaultRoutineTemplate(now: number): RoutineTemplate {
     startMinute: number | null,
     durationMinutes: number | null,
     note = '',
-  ): RoutineBlock => ({ id, name, startMinute, durationMinutes, note });
+    isWorkBlock = false,
+  ): RoutineBlock => ({ id, name, startMinute, durationMinutes, note, isWorkBlock });
 
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -82,8 +93,8 @@ export function defaultRoutineTemplate(now: number): RoutineTemplate {
       block('tea', 'Tea', null, 10, ''),
       block('shower', 'Shower', null, null, ''),
       block('work-start', 'Workday start', 10 * 60, null, '8-hour work window'),
-      block('interview-prep', 'Interview prep', null, null, 'Leetcode and study — comes first'),
-      block('project-work', 'Project work', null, null, ''),
+      block('interview-prep', 'Interview prep', null, null, 'Leetcode and study — comes first', true),
+      block('project-work', 'Project work', null, null, '', true),
       block('work-end', 'Workday end', 18 * 60, null, 'Lunch is additional to the 8 hours'),
       block('gaming', 'Gaming', null, null, 'Not tracked'),
       block('wind-down', 'PM skincare, wind-down, sleep', null, null, 'Not tracked in detail'),
@@ -98,6 +109,7 @@ export function snapshotRoutine(template: RoutineTemplate): RoutineBlockSnapshot
     startMinute: block.startMinute,
     durationMinutes: block.durationMinutes,
     completedAt: null,
+    isWorkBlock: block.isWorkBlock,
   }));
 }
 
@@ -172,4 +184,18 @@ export function toggleBlockCompletion(
 
 export function completedBlockCount(routine: readonly RoutineBlockSnapshot[]): number {
   return routine.filter((block) => block.completedAt !== null).length;
+}
+
+/** The blocks the timer can be pointed at — work inside the 8-hour window. */
+export function workBlocks(
+  routine: readonly RoutineBlockSnapshot[],
+): readonly RoutineBlockSnapshot[] {
+  return routine.filter((block) => block.isWorkBlock);
+}
+
+/** The task to start on by default: the first work block of the day. */
+export function defaultTask(
+  routine: readonly RoutineBlockSnapshot[],
+): RoutineBlockSnapshot | undefined {
+  return workBlocks(routine)[0];
 }

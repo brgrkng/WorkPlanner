@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { actualWorkedMs, msToRoundedMinutes, parseDayKey, type DayKey } from '@/domain';
@@ -57,9 +57,25 @@ afterEach(() => {
 describe('workday view', () => {
   it('lists the routine blocks', async () => {
     await renderDay();
-    expect(screen.getByText('Transition nap')).toBeInTheDocument();
-    expect(screen.getByText('Interview prep')).toBeInTheDocument();
-    expect(screen.getByText('Workday start')).toBeInTheDocument();
+    // Scoped to the routine: work blocks also appear as timer task chips.
+    const routine = screen.getByRole('region', { name: /today/i });
+    expect(within(routine).getByText('Transition nap')).toBeInTheDocument();
+    expect(within(routine).getByText('Interview prep')).toBeInTheDocument();
+    expect(within(routine).getByText('Workday start')).toBeInTheDocument();
+  });
+
+  // The point of the task chips: pick what you are working on without having to
+  // tick it off the checklist.
+  it('keeps the checklist and the timer task selector independent', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+    const timer = screen.getByRole('region', { name: /pomodoro timer/i });
+
+    await user.click(within(timer).getByRole('button', { name: 'Project work' }));
+
+    expect(
+      within(routine).getByRole('checkbox', { name: /project work/i }),
+    ).not.toBeChecked();
   });
 
   it('shows the fixed times', async () => {

@@ -8,8 +8,10 @@ import {
   parseTimeOfDay,
   removeBlock,
   snapshotRoutine,
+  defaultTask,
   toggleBlockCompletion,
   updateBlock,
+  workBlocks,
   type RoutineBlock,
   type RoutineTemplate,
 } from './routine';
@@ -24,6 +26,7 @@ const block = (id: string, name = id): RoutineBlock => ({
   startMinute: null,
   durationMinutes: null,
   note: '',
+  isWorkBlock: false,
 });
 
 describe('time-of-day parsing', () => {
@@ -179,5 +182,46 @@ describe('block completion', () => {
     const snapshot = snapshotRoutine(template());
     toggleBlockCompletion(snapshot, 'tea', NOW);
     expect(snapshot.find((b) => b.id === 'tea')?.completedAt).toBeNull();
+  });
+});
+
+describe('work blocks', () => {
+  // Only work inside the 8-hour window is selectable as a timer task.
+  it('are interview prep and project work by default', () => {
+    const snapshot = snapshotRoutine(template());
+    expect(workBlocks(snapshot).map((b) => b.id)).toEqual(['interview-prep', 'project-work']);
+  });
+
+  it('exclude the nap, tea, gaming and wind-down', () => {
+    const ids = workBlocks(snapshotRoutine(template())).map((b) => b.id);
+    for (const id of ['wake', 'nap', 'tea', 'shower', 'gaming', 'wind-down']) {
+      expect(ids).not.toContain(id);
+    }
+  });
+
+  it('exclude the workday start and end markers', () => {
+    const ids = workBlocks(snapshotRoutine(template())).map((b) => b.id);
+    expect(ids).not.toContain('work-start');
+    expect(ids).not.toContain('work-end');
+  });
+
+  it('default to the first work block in routine order', () => {
+    expect(defaultTask(snapshotRoutine(template()))?.id).toBe('interview-prep');
+  });
+
+  it('follow the order the user put the blocks in', () => {
+    const reordered = moveBlock(template(), 'project-work', -1, LATER);
+    expect(defaultTask(snapshotRoutine(reordered))?.id).toBe('project-work');
+  });
+
+  it('are undefined when nothing is marked as work', () => {
+    const none = { ...template(), blocks: template().blocks.map((b) => ({ ...b, isWorkBlock: false })) };
+    expect(workBlocks(snapshotRoutine(none))).toEqual([]);
+    expect(defaultTask(snapshotRoutine(none))).toBeUndefined();
+  });
+
+  it('pick up a block the user marks as work', () => {
+    const marked = updateBlock(template(), 'gaming', { isWorkBlock: true }, LATER);
+    expect(workBlocks(snapshotRoutine(marked)).map((b) => b.id)).toContain('gaming');
   });
 });

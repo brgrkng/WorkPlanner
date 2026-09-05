@@ -144,3 +144,36 @@
   font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* Task selector: what the running session is being spent on. Only work blocks
+   inside the 8-hour window appear here. */
+.tasks {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.task,
+.taskActive {
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 0.3125rem 0.875rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  transition: color 120ms ease, border-color 120ms ease, background-color 120ms ease;
+}
+
+.task:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.taskActive {
+  background: rgba(110, 168, 254, 0.12);
+  border-color: var(--accent);
+  color: var(--text);
+}

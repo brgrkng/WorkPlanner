@@ -25,6 +25,8 @@ function session(hours: number, distractionFree: WorkSession['distractionFree'] 
     recovered: false,
     pausedMs: 0,
     completedFullInterval: true,
+    taskId: null,
+    taskName: '',
   };
 }
 

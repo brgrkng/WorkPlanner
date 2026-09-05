@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -33,7 +33,8 @@ describe('App', () => {
     render(<App />);
     await user.click(await screen.findByRole('button', { name: 'Today' }));
 
-    expect(screen.getByText('Interview prep')).toBeInTheDocument();
+    const routine = screen.getByRole('region', { name: /today/i });
+    expect(within(routine).getByText('Interview prep')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start work/i })).toBeInTheDocument();
   });
 

@@ -322,3 +322,97 @@ describe('heartbeat', () => {
     expect(localStorage.getItem(TIMER_STORAGE_KEY)).toBeNull();
   });
 });
+
+describe('task selection', () => {
+  it('offers only the work blocks inside the 8-hour window', async () => {
+    await renderPanel();
+    expect(screen.getByRole('button', { name: 'Interview prep' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Project work' })).toBeInTheDocument();
+    // Part of the routine, but not work: must not be selectable.
+    expect(screen.queryByRole('button', { name: 'Transition nap' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Gaming' })).not.toBeInTheDocument();
+  });
+
+  // Starting must never require a decision first — activation energy is the
+  // thing being protected.
+  it('defaults to the first work block', async () => {
+    await renderPanel();
+    expect(screen.getByRole('button', { name: 'Interview prep' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('records the selected task against the session', async () => {
+    await renderPanel();
+    await user.click(screen.getByRole('button', { name: 'Project work' }));
+    await user.click(screen.getByRole('button', { name: /start work/i }));
+    advance(25 * MIN);
+    await user.click(screen.getByRole('button', { name: /^stop$/i }));
+
+    const session = store.get(TODAY)?.workSessions[0];
+    expect(session?.taskId).toBe('project-work');
+    expect(session?.taskName).toBe('Project work');
+  });
+
+  // Switching mid-session must not relabel time already spent on the old task.
+  it('splits the session when the task changes while running', async () => {
+    await renderPanel();
+    await user.click(screen.getByRole('button', { name: /start work/i }));
+    advance(20 * MIN);
+
+    await user.click(screen.getByRole('button', { name: 'Project work' }));
+    advance(15 * MIN);
+    await user.click(screen.getByRole('button', { name: /^stop$/i }));
+
+    const sessions = store.get(TODAY)?.workSessions ?? [];
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0]?.taskName).toBe('Interview prep');
+    expect(sessions[1]?.taskName).toBe('Project work');
+    // Both halves are credited: nothing is lost in the switch.
+    expect(workedMinutesToday()).toBe(35);
+  });
+
+  it('keeps running through a task switch', async () => {
+    await renderPanel();
+    await user.click(screen.getByRole('button', { name: /start work/i }));
+    advance(10 * MIN);
+    await user.click(screen.getByRole('button', { name: 'Project work' }));
+
+    expect(screen.getByText(/working/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^stop$/i })).toBeInTheDocument();
+  });
+
+  it('ignores selecting the task that is already active', async () => {
+    await renderPanel();
+    await user.click(screen.getByRole('button', { name: /start work/i }));
+    advance(10 * MIN);
+    await user.click(screen.getByRole('button', { name: 'Interview prep' }));
+
+    // No split, because nothing changed.
+    expect(store.get(TODAY)?.workSessions ?? []).toHaveLength(0);
+  });
+
+  // A session recovered after a power cut must still say what it was spent on.
+  it('carries the task into a recovered session', async () => {
+    const { unmount } = await renderPanel();
+    await user.click(screen.getByRole('button', { name: 'Project work' }));
+    await user.click(screen.getByRole('button', { name: /start work/i }));
+    advance(18 * MIN);
+
+    // The heartbeat is on disk; the tab dies without a clean stop.
+    const heartbeat = localStorage.getItem(TIMER_STORAGE_KEY);
+    expect(heartbeat).not.toBeNull();
+    unmount();
+    localStorage.setItem(TIMER_STORAGE_KEY, heartbeat as string);
+
+    // Reopened well after the grace window, so this is the crash path.
+    vi.setSystemTime(new Date(2026, 8, 6, 12, 0));
+    await renderPanel();
+
+    await waitFor(() => expect(store.get(TODAY)?.workSessions).toHaveLength(1));
+    const recovered = store.get(TODAY)?.workSessions[0];
+    expect(recovered?.recovered).toBe(true);
+    expect(recovered?.taskName).toBe('Project work');
+  });
+});

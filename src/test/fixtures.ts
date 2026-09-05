@@ -28,6 +28,8 @@ export function session(
     source?: WorkSession['source'];
     pausedMs?: number;
     completedFullInterval?: boolean;
+    taskId?: string | null;
+    taskName?: string;
   } = {},
 ): WorkSession {
   const startedAt = options.startedAt ?? NOW;
@@ -42,6 +44,8 @@ export function session(
     recovered: options.recovered ?? false,
     pausedMs,
     completedFullInterval: options.completedFullInterval ?? true,
+    taskId: options.taskId ?? null,
+    taskName: options.taskName ?? '',
   };
 }
 
