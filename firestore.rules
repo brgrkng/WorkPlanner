@@ -9,9 +9,10 @@ rules_version = '2';
 // the public repo is still worth doing, but it protects nothing on its own.
 // What stops someone reading or wiping this data is exactly the rules below.
 //
-// SETUP: replace REPLACE_WITH_YOUR_UID with the UID of the single account you
-// create in the Firebase console (Authentication -> Users -> the "User UID"
-// column). Until you do, every request is denied — which is the safe default.
+// The UID below is the single account created in Authentication -> Users. It is
+// not a credential: it names which account the rules trust, and signing in still
+// requires the password via a verified Firebase token — so it is safe here in a
+// public repo. To point this at a different account, replace it and re-publish.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -19,7 +20,7 @@ service cloud.firestore {
     // The one account that may touch anything.
     function isOwner() {
       return request.auth != null
-          && request.auth.uid == 'REPLACE_WITH_YOUR_UID';
+          && request.auth.uid == 'qcvnGLiJM1cn3m6zQsPLDE3gdvp1';
     }
 
     // Day logs and the meta document live under the owner's own subtree.
