@@ -1,15 +1,77 @@
-:root {
-  --bg: #0f1115;
-  --surface: #171a21;
-  --border: #262b36;
-  --text: #e6e8eb;
-  --muted: #8b93a3;
-  --accent: #6ea8fe;
+/* =============================================================================
+   WorkPlanner design tokens — light, Swiss/minimal.
 
-  color-scheme: dark;
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 15px;
+   Every colour, radius, shadow and step in the app comes from here. Feature
+   modules must not hold a raw hex; the one exception is the chart tokens in
+   AllocationMeter.module.css, which are validated series colours and are
+   documented there.
+
+   Contrast, measured against the surface each token is actually used on
+   (page #f5f6f8 is the worst case, being the darkest ground):
+     --text   #10141c  17.2:1     --muted  #667085  4.64:1
+     --text-2 #48505e   7.58:1    --accent #2563eb  4.82:1
+     --danger #c62828   5.24:1    white on --accent 5.17:1
+   All body text therefore clears 4.5:1 everywhere it appears.
+   ========================================================================== */
+
+:root {
+  /* Surfaces, lightest ground last. --sunken is for anything recessed into a
+     card: inputs, segmented-control tracks. */
+  --page: #f5f6f8;
+  --surface: #ffffff;
+  --sunken: #f2f4f7;
+  --hover: #f7f8fa;
+
+  --border: #e3e7ed;
+  --border-strong: #cbd2dc;
+
+  --text: #10141c;
+  --text-2: #48505e;
+  --muted: #667085;
+
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eef3fe;
+  --accent-border: #c3d6fb;
+  --on-accent: #ffffff;
+
+  --danger: #c62828;
+  --good: #12946a;
+
+  /* Swiss style: shadows are tight and low-contrast, or absent. They separate
+     a card from the page; they never simulate depth. */
+  --shadow-card: 0 1px 2px rgba(16, 20, 28, 0.05), 0 1px 3px rgba(16, 20, 28, 0.04);
+  --shadow-raised: 0 1px 2px rgba(16, 20, 28, 0.09);
+
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-pill: 999px;
+
+  /* Density 7/10 — this is a dashboard, not a marketing page. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.25rem;
+  --s-6: 1.5rem;
+  --s-7: 2rem;
+  --s-8: 2.5rem;
+
+  --font-sans:
+    'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
+
+  --t-fast: 120ms ease;
+  --t-base: 180ms ease;
+
+  color-scheme: light;
+  font-family: var(--font-sans);
+  font-size: 16px;
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 * {
@@ -19,6 +81,58 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--page);
   color: var(--text);
+}
+
+/* Controls inherit the type ramp rather than falling back to the UA's 13px
+   Arial, which is what made every input look bolted on. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* One focus ring for the whole app. :focus-visible, so a mouse click never
+   paints a ring but every keyboard path does. Priority-1 accessibility: this
+   is the thing that was missing on every button before the redesign. */
+:where(button, input, select, textarea, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

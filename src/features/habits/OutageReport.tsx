@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '@/ui';
 import type { HabitsView } from './useHabits';
 import styles from './HabitsPanel.module.css';
 
@@ -67,7 +68,7 @@ export function OutageReport({ habits }: { readonly habits: HabitsView }) {
                 aria-label={`Remove ${report.minutes} minute report`}
                 onClick={() => habits.deleteReport(report.id)}
               >
-                ×
+                <Icon name="close" />
               </button>
             </li>
           ))}

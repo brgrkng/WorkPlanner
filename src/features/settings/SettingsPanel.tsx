@@ -159,9 +159,11 @@ export function SettingsPanel() {
       </div>
 
       <p className={styles.note}>
-        A day is 04:00 to 03:59, so work past midnight counts toward the day it started.
-        Friday and Saturday are off days: never allocated, never counted against a streak.
-        The timer is silent by design — no sounds, no notifications.
+        <span>
+          A day is 04:00 to 03:59, so work past midnight counts toward the day it started.
+          Friday and Saturday are off days: never allocated, never counted against a streak.
+          The timer is silent by design — no sounds, no notifications.
+        </span>
       </p>
     </section>
   );

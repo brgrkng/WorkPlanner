@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '@/ui';
 import type { HabitsView } from './useHabits';
 import styles from './HabitsPanel.module.css';
 
@@ -29,7 +30,7 @@ export function OfflineTaskList({ habits }: { readonly habits: HabitsView }) {
               aria-label={`Remove offline task: ${task.text}`}
               onClick={() => habits.deleteTask(task.id)}
             >
-              ×
+              <Icon name="close" />
             </button>
           </li>
         ))}

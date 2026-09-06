@@ -1,23 +1,25 @@
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.5rem 1.75rem;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--s-6) var(--s-7);
   display: grid;
-  gap: 1.25rem;
+  gap: var(--s-5);
 }
 
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--s-4);
 }
 
 .title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.0625rem;
   font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .project {
@@ -28,8 +30,9 @@
 
 .offDayTitle {
   margin: 0;
-  font-size: 1.125rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .offDayNote {
@@ -43,16 +46,25 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.125rem;
 }
 
+/* Rows, not cards: the routine is a checklist and should scan top-to-bottom in
+   one movement. The hover wash is the only affordance, and it bleeds into the
+   card padding so the hit area matches the row. */
 .block {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.4375rem 0;
-  border-bottom: 1px solid rgba(38, 43, 54, 0.6);
+  gap: var(--s-4);
+  padding: var(--s-2) var(--s-2);
+  margin: 0 calc(var(--s-2) * -1);
+  border-radius: var(--r-sm);
+  border-bottom: 1px solid var(--border);
+  transition: background-color var(--t-fast);
+}
+
+.block:hover {
+  background: var(--hover);
 }
 
 .block:last-child {
@@ -62,9 +74,10 @@
 .blockLabel {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: var(--s-2);
   cursor: pointer;
   min-width: 0;
+  flex: 1;
 }
 
 .name {
@@ -80,7 +93,7 @@
 .blockRight {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--s-3);
   flex-shrink: 0;
 }
 
@@ -93,14 +106,27 @@
 .countdownStart,
 .countdownStop,
 .iconButton {
-  font: inherit;
   font-size: 0.75rem;
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid var(--border);
+  font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
   color: var(--muted);
-  border-radius: 4px;
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--r-sm);
+  padding: 0.1875rem 0.5625rem;
+  transition:
+    color var(--t-fast),
+    border-color var(--t-fast),
+    background-color var(--t-fast);
+}
+
+/* Square, because it holds a 16px icon rather than a text label. */
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
 }
 
 .countdownStart:hover,
@@ -108,17 +134,17 @@
 .iconButton:hover:not(:disabled) {
   color: var(--text);
   border-color: var(--muted);
+  background: var(--hover);
 }
 
 .iconButton:disabled {
   opacity: 0.35;
-  cursor: default;
 }
 
 .countdownRunning {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--s-2);
 }
 
 .countdownClock,
@@ -129,28 +155,31 @@
 
 .countdownClock {
   color: var(--accent);
+  font-weight: 600;
 }
 
 .countdownDone {
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
+  font-weight: 600;
   font-size: 0.6875rem;
 }
 
 .lunch {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: var(--s-3);
   flex-wrap: wrap;
-  padding-top: 1rem;
+  padding-top: var(--s-4);
   border-top: 1px solid var(--border);
 }
 
 .lunchClock {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-variant-numeric: tabular-nums;
   font-weight: 300;
+  letter-spacing: -0.02em;
 }
 
 .lunchLabel {
@@ -160,61 +189,66 @@
 
 .selfReport {
   display: grid;
-  gap: 0.625rem;
-  padding-top: 1rem;
+  gap: var(--s-2);
+  padding-top: var(--s-4);
   border-top: 1px solid var(--border);
 }
 
 .checkLabel {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: var(--s-2);
   font-size: 0.875rem;
   cursor: pointer;
+  width: fit-content;
 }
 
 .noteInput,
 .editorName,
 .editorTime,
 .editorDuration {
-  font: inherit;
   font-size: 0.875rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
   color: var(--text);
-  padding: 0.375rem 0.5rem;
+  padding: 0.4375rem 0.625rem;
+  transition: border-color var(--t-fast);
 }
 
-.noteInput:focus,
-.editorName:focus,
-.editorTime:focus,
-.editorDuration:focus {
-  outline: 1px solid var(--accent);
-  outline-offset: -1px;
+.noteInput:hover,
+.editorName:hover,
+.editorTime:hover,
+.editorDuration:hover {
+  border-color: var(--muted);
 }
 
 .secondary,
 .link {
-  font: inherit;
-  cursor: pointer;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  padding: 0.375rem 0.875rem;
   font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.4375rem 0.875rem;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast);
 }
 
 .secondary:hover {
+  background: var(--hover);
   border-color: var(--muted);
 }
 
 .link {
   border: none;
+  background: none;
   color: var(--muted);
   text-decoration: underline;
-  padding: 0.25rem;
+  text-underline-offset: 2px;
+  padding: var(--s-1);
 }
 
 .link:hover {
@@ -223,16 +257,19 @@
 
 .editor {
   display: grid;
-  gap: 0.875rem;
+  gap: var(--s-3);
 }
 
+/* Says out loud that edits are forward-only. Accent wash, not a warning colour:
+   it is a fact about the model, not a problem. */
 .editorNote {
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--muted);
-  padding: 0.5rem 0.75rem;
-  background: rgba(110, 168, 254, 0.08);
-  border-radius: 5px;
+  color: var(--text-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
 }
 
 .editorList {
@@ -240,36 +277,37 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.375rem;
+  gap: var(--s-1);
 }
 
 .editorRow {
   display: grid;
-  grid-template-columns: 1fr 7rem 4.5rem auto auto;
-  gap: 0.375rem;
+  grid-template-columns: 1fr 8.5rem 4.5rem auto auto;
+  gap: var(--s-1);
   align-items: center;
 }
 
 .workFlag {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--s-1);
   font-size: 0.6875rem;
+  font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .editorActions {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--s-1);
 }
 
 .editorAdd {
   display: flex;
-  gap: 0.375rem;
+  gap: var(--s-1);
 }
 
 .editorAdd .editorName {
@@ -278,9 +316,9 @@
 
 .projectField {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--s-1);
   font-size: 0.8125rem;
   color: var(--muted);
-  padding-top: 0.5rem;
+  padding-top: var(--s-2);
   border-top: 1px solid var(--border);
 }

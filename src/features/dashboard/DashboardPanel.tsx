@@ -1,4 +1,5 @@
 import { msToRoundedMinutes, type Granularity } from '@/domain';
+import { Icon } from '@/ui';
 import { AllocationMeter } from './AllocationMeter';
 import { DayDetail } from './DayDetail';
 import { Deadlines } from './Deadlines';
@@ -73,7 +74,7 @@ export function DashboardPanel() {
             disabled={!dashboard.canGoBack}
             onClick={dashboard.goBack}
           >
-            ←
+            <Icon name="chevronLeft" />
           </button>
           <span className={styles.periodLabel}>{dashboard.label}</span>
           <button
@@ -83,7 +84,7 @@ export function DashboardPanel() {
             disabled={!dashboard.canGoForward}
             onClick={dashboard.goForward}
           >
-            →
+            <Icon name="chevronRight" />
           </button>
         </div>
       </header>

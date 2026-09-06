@@ -1,27 +1,40 @@
-/* Chart tokens. Single-hue meter: fill and track come from one blue ramp, so
-   state reads across the whole arc. The breakdown bar uses categorical slots
-   1 and 2, validated against this surface (worst adjacent CVD dE 26.8). */
+/* Chart tokens — the one place in the app that carries raw hex, because these
+   are validated series colours, not theme colours.
+
+   Re-validated for the light surface after the M9 redesign (the previous values
+   were stepped for the old dark card #171a21 and are wrong on white):
+     node scripts/validate_palette.js "#2a78d6,#eb6834" --mode light --surface "#ffffff"
+       lightness band PASS · chroma floor PASS · contrast PASS
+       adjacent CVD dE 24.7 (protan) · normal-vision dE 33.6
+
+   Single-hue meter: fill and track come from one blue ramp (steps 450 and 150),
+   so state reads across the whole arc. The track is chrome, not a series, and
+   is exempt from the series gates. --viz-over is the "past target" step,
+   contrast 3.84:1 on white. The breakdown bar uses categorical slots 1 and 2. */
 .figure {
-  --viz-fill: #3987e5;
-  --viz-track: #1c3d63;
-  --viz-over: #199e70;
-  --viz-offline: #d95926;
+  --viz-fill: #2a78d6;
+  --viz-track: #b7d3f6;
+  --viz-over: #12946a;
+  --viz-offline: #eb6834;
 
   margin: 0;
   display: grid;
   justify-items: center;
-  gap: 0.875rem;
+  gap: var(--s-3);
 }
 
+/* The SVG viewBox is 140 wide; rendering it at 168 scales the ring with it and
+   widens the hole to ~125px, which is what the two-line centre label needs -
+   at 140 the unit label ran into the bottom of the stroke. */
 .meter {
   position: relative;
-  width: 140px;
-  height: 140px;
+  width: 168px;
+  height: 168px;
 }
 
 .ring {
-  width: 140px;
-  height: 140px;
+  width: 168px;
+  height: 168px;
   display: block;
 }
 
@@ -54,15 +67,16 @@
   font-size: 3rem;
   font-weight: 300;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--text);
 }
 
 .heroUnit {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
+  font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
 }
 
 .caption {
@@ -77,7 +91,7 @@
 /* Values wear text tokens, never the series colour. */
 .ratio {
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }

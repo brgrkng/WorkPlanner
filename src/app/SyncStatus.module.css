@@ -4,19 +4,21 @@
   color: var(--muted);
 }
 
+/* The only red in the header, and it always ships with the words that say the
+   local data is safe. */
 .error {
   font-size: 0.75rem;
-  color: #e66767;
+  font-weight: 500;
+  color: var(--danger);
 }
 
 .link {
-  font: inherit;
   font-size: 0.75rem;
-  cursor: pointer;
   background: none;
   border: none;
   color: var(--muted);
   text-decoration: underline;
+  text-underline-offset: 2px;
   padding: 0;
 }
 
@@ -27,31 +29,42 @@
 .form {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--s-1);
 }
 
 .input {
-  font: inherit;
   font-size: 0.75rem;
   width: 9rem;
-  padding: 0.25rem 0.4375rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xs);
   color: var(--text);
+  transition: border-color var(--t-fast);
+}
+
+.input:hover {
+  border-color: var(--muted);
 }
 
 .button {
-  font: inherit;
   font-size: 0.75rem;
-  cursor: pointer;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: transparent;
+  font-weight: 500;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
   color: var(--text);
   padding: 0.25rem 0.625rem;
+  transition:
+    background-color var(--t-fast),
+    border-color var(--t-fast);
 }
 
 .button:hover:not(:disabled) {
+  background: var(--hover);
   border-color: var(--muted);
+}
+
+.button:disabled {
+  opacity: 0.5;
 }

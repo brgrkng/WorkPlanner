@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatTimeOfDay, parseTimeOfDay } from '@/domain';
+import { Icon } from '@/ui';
 import type { RoutineView } from './useRoutine';
 import styles from './RoutinePanel.module.css';
 
@@ -74,7 +75,7 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
                 disabled={index === 0}
                 onClick={() => routine.moveRoutineBlock(block.id, -1)}
               >
-                ↑
+                <Icon name="arrowUp" />
               </button>
               <button
                 type="button"
@@ -83,7 +84,7 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
                 disabled={index === routine.template.blocks.length - 1}
                 onClick={() => routine.moveRoutineBlock(block.id, 1)}
               >
-                ↓
+                <Icon name="arrowDown" />
               </button>
               <button
                 type="button"
@@ -91,7 +92,7 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
                 aria-label={`Remove ${block.name}`}
                 onClick={() => routine.removeRoutineBlock(block.id)}
               >
-                ×
+                <Icon name="close" />
               </button>
             </span>
           </li>

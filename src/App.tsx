@@ -26,8 +26,13 @@ function Shell() {
     <main className={styles.main}>
       <header className={styles.header}>
         <div className={styles.brand}>
+          <span className={styles.mark} aria-hidden="true">
+            WP
+          </span>
           <h1 className={styles.title}>WorkPlanner</h1>
-          <SyncStatus />
+          <div className={styles.status}>
+            <SyncStatus />
+          </div>
         </div>
         <nav className={styles.viewTabs}>
           <button

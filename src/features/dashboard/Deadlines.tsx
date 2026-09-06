@@ -7,6 +7,7 @@ import {
   type DayKey,
   type Deadline,
 } from '@/domain';
+import { Icon } from '@/ui';
 import type { DashboardView } from './useDashboard';
 import styles from './DashboardPanel.module.css';
 
@@ -99,7 +100,7 @@ export function Deadlines({ dashboard }: { readonly dashboard: DashboardView }) 
                 aria-label={`Remove ${deadline.title}`}
                 onClick={() => dashboard.deleteDeadline(deadline.id)}
               >
-                ×
+                <Icon name="close" />
               </button>
             </li>
           );
