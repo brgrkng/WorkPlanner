@@ -6,6 +6,7 @@ import {
   defaultRoutineTemplate,
   defaultSettings,
   migrateDayLog,
+  migrateRoutineTemplate,
   type DayKey,
   type DayLog,
   type DayLogIndex,
@@ -98,7 +99,11 @@ export class DayLogStore {
     }
 
     if (settings !== undefined) this.currentSettings = { ...defaultSettings(), ...settings };
-    if (template !== undefined && Array.isArray(template.blocks)) this.currentTemplate = template;
+    // Through the migration, not trusted raw: a template stored before M8 has
+    // no work flags, which leaves the timer with no task on every future day.
+    if (template !== undefined && Array.isArray(template.blocks)) {
+      this.currentTemplate = migrateRoutineTemplate(template, Date.now());
+    }
     if (offlineTasks !== undefined && Array.isArray(offlineTasks.tasks)) {
       this.currentOfflineTasks = offlineTasks;
     }
@@ -365,7 +370,10 @@ export class DayLogStore {
       this.enqueue(() => this.adapter.put('meta', OFFLINE_TASKS_KEY, this.currentOfflineTasks));
       changed = true;
     }
-    if (meta.deadlines !== undefined && meta.deadlines.updatedAt > this.currentDeadlines.updatedAt) {
+    if (
+      meta.deadlines !== undefined &&
+      meta.deadlines.updatedAt > this.currentDeadlines.updatedAt
+    ) {
       this.currentDeadlines = meta.deadlines;
       this.enqueue(() => this.adapter.put('meta', DEADLINES_KEY, this.currentDeadlines));
       changed = true;

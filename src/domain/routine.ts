@@ -93,12 +93,58 @@ export function defaultRoutineTemplate(now: number): RoutineTemplate {
       block('tea', 'Tea', null, 10, ''),
       block('shower', 'Shower', null, null, ''),
       block('work-start', 'Workday start', 10 * 60, null, '8-hour work window'),
-      block('interview-prep', 'Interview prep', null, null, 'Leetcode and study — comes first', true),
+      block(
+        'interview-prep',
+        'Interview prep',
+        null,
+        null,
+        'Leetcode and study — comes first',
+        true,
+      ),
       block('project-work', 'Project work', null, null, '', true),
       block('work-end', 'Workday end', 18 * 60, null, 'Lunch is additional to the 8 hours'),
       block('gaming', 'Gaming', null, null, 'Not tracked'),
       block('wind-down', 'PM skincare, wind-down, sleep', null, null, 'Not tracked in detail'),
     ],
+  };
+}
+
+/**
+ * The blocks the default routine ships as work. Used only to repair records
+ * written before `isWorkBlock` existed — see `migrateDayLog`. Ids are stable,
+ * which is what makes the repair safe: a renamed or reordered block keeps its
+ * id, and a block the user added has an id that is not in here.
+ */
+export const DEFAULT_WORK_BLOCK_IDS: ReadonlySet<string> = new Set([
+  'interview-prep',
+  'project-work',
+]);
+
+/**
+ * Brings a stored routine template up to the current shape.
+ *
+ * A template written before M8 has no `isWorkBlock` on its blocks, which reads
+ * as "nothing is work" and leaves the timer with no task to point at. Unlike a
+ * day log the template is not a historical record, so filling the flag in is
+ * simply repair, not rewriting the past.
+ */
+export function migrateRoutineTemplate(raw: unknown, now: number): RoutineTemplate {
+  if (typeof raw !== 'object' || raw === null) return defaultRoutineTemplate(now);
+  const record = raw as Record<string, unknown>;
+  if (!Array.isArray(record.blocks)) return defaultRoutineTemplate(now);
+
+  const blocks = (record.blocks as RoutineBlock[]).map((block) => ({
+    ...block,
+    isWorkBlock:
+      typeof block.isWorkBlock === 'boolean'
+        ? block.isWorkBlock
+        : DEFAULT_WORK_BLOCK_IDS.has(block.id),
+  }));
+
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    updatedAt: typeof record.updatedAt === 'number' ? record.updatedAt : now,
+    blocks,
   };
 }
 

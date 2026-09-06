@@ -1,7 +1,10 @@
 import { SCHEMA_VERSION } from './constants';
 import type { DayLog, OfflineReport, WorkSession } from './types';
 import { isDayKey, type DayKey } from './time/dayKey';
-import type { RoutineBlockSnapshot } from './routine';
+import { DEFAULT_WORK_BLOCK_IDS, type RoutineBlockSnapshot } from './routine';
+
+/** The version that repaired work-block flags; records at or above it are trusted. */
+const WORK_BLOCK_REPAIR_VERSION = 4;
 
 /**
  * Brings a stored record up to the current shape.
@@ -25,9 +28,10 @@ export function migrateDayLog(raw: unknown): DayLog | null {
     kind: record.kind === 'offday' ? 'offday' : 'workday',
     excused: record.excused === true,
     allocatedMinutes: numberOr(record.allocatedMinutes, 0),
-    routine: Array.isArray(record.routine)
-      ? (record.routine as RoutineBlockSnapshot[]).map(migrateRoutineBlock)
-      : [],
+    routine: migrateRoutine(
+      Array.isArray(record.routine) ? (record.routine as RoutineBlockSnapshot[]) : [],
+      numberOr(record.schemaVersion, 0),
+    ),
     workSessions: Array.isArray(record.workSessions)
       ? (record.workSessions as WorkSession[]).map(migrateSession)
       : [],
@@ -58,9 +62,37 @@ function migrateSession(session: WorkSession): WorkSession {
   };
 }
 
-/** Routine snapshots written before work blocks were distinguishable. */
-function migrateRoutineBlock(block: RoutineBlockSnapshot): RoutineBlockSnapshot {
-  return { ...block, isWorkBlock: block.isWorkBlock === true };
+/**
+ * Repairs routine snapshots damaged by the v3 migration.
+ *
+ * `isWorkBlock` arrived in v3. That migration collapsed the field with
+ * `isWorkBlock === true`, which turned "this record predates the flag" into a
+ * hard `false` on every block — and a day with no work blocks gives the timer
+ * nothing to point at, silently, forever. The information was destroyed in the
+ * stored record, so v4 restores it from the one thing that survived: the block
+ * ids, which are stable across renames and reordering.
+ *
+ * The repair is deliberately narrow. It only ever turns a flag **on**, only on
+ * a day that has no work block at all, and only for an id the default routine
+ * ships as work — so a day the user has genuinely configured is never touched,
+ * and a block they added themselves is never assumed to be work. From v4 on,
+ * whatever is stored is the truth.
+ *
+ * Safe against the immutability rule because `isWorkBlock` feeds no
+ * accountability number: it selects which blocks the timer can be pointed at,
+ * and nothing else. No streak, ratio or logged minute can move.
+ */
+function migrateRoutine(
+  blocks: readonly RoutineBlockSnapshot[],
+  storedVersion: number,
+): RoutineBlockSnapshot[] {
+  const normalized = blocks.map((block) => ({ ...block, isWorkBlock: block.isWorkBlock === true }));
+  if (storedVersion >= WORK_BLOCK_REPAIR_VERSION) return normalized;
+  if (normalized.some((block) => block.isWorkBlock)) return normalized;
+
+  return normalized.map((block) =>
+    DEFAULT_WORK_BLOCK_IDS.has(block.id) ? { ...block, isWorkBlock: true } : block,
+  );
 }
 
 function numberOr(value: unknown, fallback: number): number {
