@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatTimeOfDay } from '@/domain';
+import { useTimerContext } from '@/features/timer';
 import { BlockCountdown } from './BlockCountdown';
 import { RoutineEditor } from './RoutineEditor';
 import { useRoutine } from './useRoutine';
@@ -19,6 +20,7 @@ function formatClock(ms: number): string {
  */
 export function RoutinePanel() {
   const routine = useRoutine();
+  const timer = useTimerContext();
   const [editing, setEditing] = useState(false);
 
   if (routine.isOffDay) {
@@ -33,7 +35,7 @@ export function RoutinePanel() {
   }
 
   return (
-    <section className={styles.panel} aria-label="Today&apos;s routine">
+    <section className={styles.panel} aria-label="Today's routine">
       <header className={styles.header}>
         <div>
           <h2 className={styles.title}>Today</h2>
@@ -54,17 +56,40 @@ export function RoutinePanel() {
       ) : (
         <ol className={styles.blocks}>
           {routine.routine.map((block) => (
-            <li key={block.id} className={styles.block}>
-              <label className={styles.blockLabel}>
+            <li
+              key={block.id}
+              className={block.id === timer.selectedTaskId ? styles.blockSelected : styles.block}
+            >
+              <div className={styles.blockLeft}>
+                {/* The checkbox is the ONLY thing that ticks a block off. It is
+                    not wrapped in a label around the name, because clicking the
+                    name has to mean something else entirely. */}
                 <input
                   type="checkbox"
                   checked={block.completedAt !== null}
+                  aria-label={block.name}
                   onChange={() => routine.toggleBlock(block.id)}
                 />
-                <span className={block.completedAt !== null ? styles.doneName : styles.name}>
-                  {block.name}
-                </span>
-              </label>
+                {block.isWorkBlock ? (
+                  /* A work block's name selects it as the timer's task. Same
+                     state as the chips above the clock, shown where the day
+                     actually is. It stretches across the row's free space so
+                     clicking anywhere but the checkbox selects rather than
+                     ticks. */
+                  <button
+                    type="button"
+                    className={block.completedAt !== null ? styles.taskNameDone : styles.taskName}
+                    aria-pressed={block.id === timer.selectedTaskId}
+                    onClick={() => timer.selectTask(block.id)}
+                  >
+                    {block.name}
+                  </button>
+                ) : (
+                  <span className={block.completedAt !== null ? styles.doneName : styles.name}>
+                    {block.name}
+                  </span>
+                )}
+              </div>
               <div className={styles.blockRight}>
                 {block.startMinute !== null ? (
                   <span className={styles.time}>{formatTimeOfDay(block.startMinute)}</span>

@@ -67,15 +67,28 @@
   background: var(--hover);
 }
 
-.block:last-child {
+/* The row the timer is currently pointed at. Marked by an accent rule on the
+   leading edge rather than a fill, so it reads as "this one" without competing
+   with the tick state next to it. */
+.blockSelected {
+  composes: block;
+  background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.blockSelected:hover {
+  background: var(--accent-soft);
+}
+
+.block:last-child,
+.blockSelected:last-child {
   border-bottom: none;
 }
 
-.blockLabel {
+.blockLeft {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  cursor: pointer;
   min-width: 0;
   flex: 1;
 }
@@ -88,6 +101,38 @@
   font-size: 0.9375rem;
   color: var(--muted);
   text-decoration: line-through;
+}
+
+/* A work block's name. Stretches to fill the row so that clicking anywhere but
+   the checkbox selects the task rather than ticking the block off. */
+.taskName,
+.taskNameDone {
+  font-size: 0.9375rem;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  transition: color var(--t-fast);
+}
+
+.taskNameDone {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.taskName:hover,
+.taskNameDone:hover {
+  color: var(--accent-hover);
+}
+
+.taskName[aria-pressed='true'],
+.taskNameDone[aria-pressed='true'] {
+  color: var(--accent-hover);
+  font-weight: 600;
 }
 
 .blockRight {

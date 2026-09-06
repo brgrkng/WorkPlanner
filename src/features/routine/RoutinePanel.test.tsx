@@ -73,9 +73,66 @@ describe('workday view', () => {
 
     await user.click(within(timer).getByRole('button', { name: 'Project work' }));
 
+    expect(within(routine).getByRole('checkbox', { name: /project work/i })).not.toBeChecked();
+  });
+
+  // The bug this replaced: the whole row was one <label>, so clicking a block's
+  // name to point the timer at it also ticked it off the checklist.
+  it('selects a work block as the timer task without ticking it off', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+    const timer = screen.getByRole('region', { name: /pomodoro timer/i });
+
+    await user.click(within(routine).getByRole('button', { name: 'Project work' }));
+
+    expect(within(routine).getByRole('checkbox', { name: /project work/i })).not.toBeChecked();
+    expect(within(routine).getByRole('button', { name: 'Project work' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    // Same state as the chips above the clock, not a second independent one.
+    expect(within(timer).getByRole('button', { name: 'Project work' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('credits work to the task picked from the routine list', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+
+    await user.click(within(routine).getByRole('button', { name: 'Project work' }));
+    await user.click(screen.getByRole('button', { name: /start work/i }));
+    advance(3 * MIN);
+    await user.click(screen.getByRole('button', { name: /^stop$/i }));
+
+    expect(store.get(SUNDAY_KEY)?.workSessions[0]?.taskName).toBe('Project work');
+  });
+
+  it('ticking a block off leaves the selected task alone', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+
+    await user.click(within(routine).getByRole('button', { name: 'Project work' }));
+    await user.click(within(routine).getByRole('checkbox', { name: /project work/i }));
+
+    expect(within(routine).getByRole('checkbox', { name: /project work/i })).toBeChecked();
+    expect(within(routine).getByRole('button', { name: 'Project work' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  // Only work blocks are selectable, so a nap must not offer a control that
+  // does nothing.
+  it('leaves a non-work block inert apart from its checkbox', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+
     expect(
-      within(routine).getByRole('checkbox', { name: /project work/i }),
-    ).not.toBeChecked();
+      within(routine).queryByRole('button', { name: 'Transition nap' }),
+    ).not.toBeInTheDocument();
+    expect(within(routine).getByRole('checkbox', { name: /transition nap/i })).toBeInTheDocument();
   });
 
   it('shows the fixed times', async () => {
