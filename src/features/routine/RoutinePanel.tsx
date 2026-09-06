@@ -6,6 +6,16 @@ import { RoutineEditor } from './RoutineEditor';
 import { useRoutine } from './useRoutine';
 import styles from './RoutinePanel.module.css';
 
+/**
+ * Work blocks are pickable as the timer's task; everything else is inert, so
+ * only a work block carries the pointer and the accent hover. Which blocks
+ * count as work is the user's call, per block, in the routine editor.
+ */
+function rowClass(isWorkBlock: boolean, isSelected: boolean): string {
+  if (isSelected) return styles.blockSelected ?? '';
+  return (isWorkBlock ? styles.blockSelectable : styles.block) ?? '';
+}
+
 function formatClock(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
@@ -58,7 +68,25 @@ export function RoutinePanel() {
           {routine.routine.map((block) => (
             <li
               key={block.id}
-              className={block.id === timer.selectedTaskId ? styles.blockSelected : styles.block}
+              className={rowClass(block.isWorkBlock, block.id === timer.selectedTaskId)}
+              /* The whole row is the target, not just the name: a click lands
+                 wherever the eye is on a 40px row, and a 23px line of text is
+                 not that. Clicks on the checkbox, the name button and the
+                 countdown control belong to those controls. Keyboard access is
+                 the name button, so the row itself needs no role of its own. */
+              onClick={
+                block.isWorkBlock
+                  ? (event) => {
+                      if (
+                        event.target instanceof Element &&
+                        event.target.closest('input, button') !== null
+                      ) {
+                        return;
+                      }
+                      timer.selectTask(block.id);
+                    }
+                  : undefined
+              }
             >
               <div className={styles.blockLeft}>
                 {/* The checkbox is the ONLY thing that ticks a block off. It is

@@ -111,6 +111,38 @@ describe('workday view', () => {
     expect(tags[0]?.closest('li')).toHaveTextContent('Project work');
   });
 
+  // The regression this covers: the click target used to be the 23px line of
+  // text, so a click landing anywhere else on the 40px row — the padding, the
+  // gap before the times on the right — silently did nothing.
+  it('selects the task from anywhere on the row, not just the name', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+    const row = within(routine).getByRole('button', { name: 'Project work' }).closest('li');
+
+    expect(row).not.toBeNull();
+    await user.click(row as HTMLElement);
+
+    expect(within(routine).getByRole('button', { name: 'Project work' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(within(routine).getByRole('checkbox', { name: /project work/i })).not.toBeChecked();
+  });
+
+  // The checkbox sits inside that same row and must keep its own meaning.
+  it('does not select the task when the row click lands on the checkbox', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+
+    await user.click(within(routine).getByRole('checkbox', { name: /project work/i }));
+
+    expect(within(routine).getByRole('checkbox', { name: /project work/i })).toBeChecked();
+    expect(within(routine).getByRole('button', { name: 'Project work' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
   it('credits work to the task picked from the routine list', async () => {
     await renderDay();
     const routine = screen.getByRole('region', { name: /today/i });

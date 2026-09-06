@@ -67,6 +67,26 @@
   background: var(--hover);
 }
 
+/* A row that can be pointed at. The pointer and the accent-tinted hover are
+   what tell the two kinds of row apart before either is clicked: a nap gets
+   the neutral grey wash above, a work block gets this. */
+.blockSelectable {
+  composes: block;
+  cursor: pointer;
+}
+
+.blockSelectable:hover {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+  border-radius: var(--r-md);
+  border-bottom-color: transparent;
+}
+
+.blockSelectable:hover .taskName,
+.blockSelectable:hover .taskNameDone {
+  color: var(--accent-hover);
+}
+
 /* The row the timer is currently pointed at.
    The signal is the BORDER, not the fill: a wash pale enough to keep --muted
    above 4.5:1 on it is only 1.14:1 against the white card, which is invisible.
@@ -129,6 +149,7 @@
 .taskName,
 .taskNameDone {
   font-size: 0.9375rem;
+  cursor: pointer;
   text-align: left;
   flex: 1;
   min-width: 0;
