@@ -91,6 +91,9 @@ export function RoutinePanel() {
                 )}
               </div>
               <div className={styles.blockRight}>
+                {block.id === timer.selectedTaskId ? (
+                  <span className={styles.timerTag}>Timer</span>
+                ) : null}
                 {block.startMinute !== null ? (
                   <span className={styles.time}>{formatTimeOfDay(block.startMinute)}</span>
                 ) : null}

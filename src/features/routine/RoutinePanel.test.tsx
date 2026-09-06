@@ -97,6 +97,20 @@ describe('workday view', () => {
     );
   });
 
+  // The highlight must not rest on colour alone, and only one row may claim it.
+  it('tags exactly one row as the timer’s task', async () => {
+    await renderDay();
+    const routine = screen.getByRole('region', { name: /today/i });
+
+    expect(within(routine).getAllByText('Timer')).toHaveLength(1);
+
+    await user.click(within(routine).getByRole('button', { name: 'Project work' }));
+
+    const tags = within(routine).getAllByText('Timer');
+    expect(tags).toHaveLength(1);
+    expect(tags[0]?.closest('li')).toHaveTextContent('Project work');
+  });
+
   it('credits work to the task picked from the routine list', async () => {
     await renderDay();
     const routine = screen.getByRole('region', { name: /today/i });
