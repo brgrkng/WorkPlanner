@@ -33,23 +33,16 @@ export function RoutinePanel() {
   const timer = useTimerContext();
   const [editing, setEditing] = useState(false);
 
-  if (routine.isOffDay) {
-    return (
-      <section className={styles.panel} aria-label="Today">
-        <p className={styles.offDayTitle}>Off day.</p>
-        <p className={styles.offDayNote}>
-          No routine, no work block, nothing tracked against you today.
-        </p>
-      </section>
-    );
-  }
-
   return (
     <section className={styles.panel} aria-label="Today's routine">
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Today</h2>
-          <p className={styles.project}>Current project: {routine.currentProject}</p>
+          <h2 className={styles.title}>{routine.isOffDay ? 'Off day' : 'Today'}</h2>
+          <p className={styles.project}>
+            {routine.isOffDay
+              ? 'No work scheduled and nothing counted against you. Your own routine for the day.'
+              : `Current project: ${routine.currentProject}`}
+          </p>
         </div>
         <button
           type="button"
@@ -134,28 +127,30 @@ export function RoutinePanel() {
         </ol>
       )}
 
-      <div className={styles.lunch}>
-        {routine.lunchRunning ? (
-          <>
-            <span className={styles.lunchClock}>{formatClock(routine.lunchRemainingMs)}</span>
-            <span className={styles.lunchLabel}>Lunch — work paused</span>
-            <button type="button" className={styles.secondary} onClick={routine.endLunch}>
-              End lunch
-            </button>
-          </>
-        ) : (
-          <>
-            <button type="button" className={styles.secondary} onClick={routine.startLunch}>
-              Start lunch
-            </button>
-            <span className={styles.lunchLabel}>
-              {routine.lunchMinutesToday > 0
-                ? `${routine.lunchMinutesToday} min logged today — not counted against the 8 hours`
-                : 'Up to 60 minutes, separate from the 8-hour window'}
-            </span>
-          </>
-        )}
-      </div>
+      {!routine.isOffDay ? (
+        <div className={styles.lunch}>
+          {routine.lunchRunning ? (
+            <>
+              <span className={styles.lunchClock}>{formatClock(routine.lunchRemainingMs)}</span>
+              <span className={styles.lunchLabel}>Lunch — work paused</span>
+              <button type="button" className={styles.secondary} onClick={routine.endLunch}>
+                End lunch
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className={styles.secondary} onClick={routine.startLunch}>
+                Start lunch
+              </button>
+              <span className={styles.lunchLabel}>
+                {routine.lunchMinutesToday > 0
+                  ? `${routine.lunchMinutesToday} min logged today — not counted against the 8 hours`
+                  : 'Up to 60 minutes, separate from the 8-hour window'}
+              </span>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <div className={styles.selfReport}>
         <label className={styles.checkLabel}>

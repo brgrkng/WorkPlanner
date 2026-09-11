@@ -3,12 +3,16 @@ import {
   createDayLog,
   dayKeyOf,
   defaultDeadlines,
+  defaultOffDayRoutineTemplate,
   defaultOfflineTasks,
   defaultRoutineTemplate,
   defaultSettings,
+  isOffDay,
   migrateDayLog,
+  migrateOffDayTemplate,
   migrateRoutineTemplate,
   reconcileRoutine,
+  sanitizeOffDayTemplate,
   type DayKey,
   type DayLog,
   type DayLogIndex,
@@ -21,6 +25,7 @@ import type { StorageAdapter } from './adapter';
 
 const SETTINGS_KEY = 'settings';
 const TEMPLATE_KEY = 'routineTemplate';
+const OFF_DAY_TEMPLATE_KEY = 'offDayRoutineTemplate';
 const OFFLINE_TASKS_KEY = 'offlineTasks';
 const DEADLINES_KEY = 'deadlines';
 
@@ -48,6 +53,7 @@ export class DayLogStore {
   private readonly cache = new Map<DayKey, DayLog>();
   private currentSettings: Settings = defaultSettings();
   private currentTemplate: RoutineTemplate = defaultRoutineTemplate(Date.now());
+  private currentOffDayTemplate: RoutineTemplate = defaultOffDayRoutineTemplate(Date.now());
   private currentOfflineTasks: OfflineTaskList = defaultOfflineTasks(Date.now());
   private currentDeadlines: DeadlineList = defaultDeadlines(Date.now());
   private readonly listeners = new Set<StoreListener>();
@@ -80,10 +86,11 @@ export class DayLogStore {
 
   /** Loads everything into memory. Call once at startup, before first render. */
   async hydrate(): Promise<void> {
-    const [logs, settings, template, offlineTasks, deadlines] = await Promise.all([
+    const [logs, settings, template, offDayTemplate, offlineTasks, deadlines] = await Promise.all([
       this.adapter.getAll<unknown>('dayLogs'),
       this.adapter.get<Settings>('meta', SETTINGS_KEY),
       this.adapter.get<RoutineTemplate>('meta', TEMPLATE_KEY),
+      this.adapter.get<RoutineTemplate>('meta', OFF_DAY_TEMPLATE_KEY),
       this.adapter.get<OfflineTaskList>('meta', OFFLINE_TASKS_KEY),
       this.adapter.get<DeadlineList>('meta', DEADLINES_KEY),
     ]);
@@ -105,6 +112,11 @@ export class DayLogStore {
     // no work flags, which leaves the timer with no task on every future day.
     if (template !== undefined && Array.isArray(template.blocks)) {
       this.currentTemplate = migrateRoutineTemplate(template, Date.now());
+    }
+    // Absent is the normal state for anyone who used the app before off-day
+    // routines existed; the migration falls back to the off-day default.
+    if (offDayTemplate !== undefined) {
+      this.currentOffDayTemplate = migrateOffDayTemplate(offDayTemplate, Date.now());
     }
     if (offlineTasks !== undefined && Array.isArray(offlineTasks.tasks)) {
       this.currentOfflineTasks = offlineTasks;
@@ -171,6 +183,17 @@ export class DayLogStore {
     return this.currentTemplate;
   }
 
+  /** The Friday/Saturday routine. Separate from the workday template: an off
+   *  day is its own day, not the workday with the work taken out. */
+  get offDayTemplate(): RoutineTemplate {
+    return this.currentOffDayTemplate;
+  }
+
+  /** The template a given day is snapshotted from or reconciled against. */
+  templateFor(dayKey: DayKey): RoutineTemplate {
+    return isOffDay(dayKey) ? this.currentOffDayTemplate : this.currentTemplate;
+  }
+
   get(dayKey: DayKey): DayLog | undefined {
     return this.cache.get(dayKey);
   }
@@ -202,6 +225,7 @@ export class DayLogStore {
     const created = createDayLog(dayKey, this.now(), {
       allocatedMinutesPerWorkday: this.currentSettings.allocatedMinutesPerWorkday,
       template: this.currentTemplate,
+      offDayTemplate: this.currentOffDayTemplate,
     });
     this.commit(created);
     return created;
@@ -249,12 +273,31 @@ export class DayLogStore {
     this.currentTemplate = template;
     this.metaDirtyFlag = true;
     this.enqueue(() => this.adapter.put('meta', TEMPLATE_KEY, template));
-    this.applyTemplateFromToday(template);
+    this.applyTemplateFromToday();
     this.emit();
     return template;
   }
 
-  private applyTemplateFromToday(template: RoutineTemplate): void {
+  /**
+   * Replaces the Friday/Saturday routine. Same rules as the workday template:
+   * applied to today and later immediately, past days untouched.
+   */
+  setOffDayTemplate(template: RoutineTemplate): RoutineTemplate {
+    const safe = sanitizeOffDayTemplate(template);
+    this.currentOffDayTemplate = safe;
+    this.metaDirtyFlag = true;
+    this.enqueue(() => this.adapter.put('meta', OFF_DAY_TEMPLATE_KEY, safe));
+    this.applyTemplateFromToday();
+    this.emit();
+    return safe;
+  }
+
+  /**
+   * Brings today and every later day into line with whichever template governs
+   * it. Each day is reconciled against its own kind's template, so editing the
+   * workday routine never touches a Saturday and vice versa.
+   */
+  private applyTemplateFromToday(): void {
     const today = this.today();
     // Keys snapshotted first: `update` writes back into the cache.
     for (const dayKey of [...this.cache.keys()]) {
@@ -262,10 +305,8 @@ export class DayLogStore {
 
       const log = this.cache.get(dayKey);
       if (log === undefined) continue;
-      // Off days have no routine at all (brief section 2).
-      if (log.kind === 'offday') continue;
 
-      const routine = reconcileRoutine(log.routine, template);
+      const routine = reconcileRoutine(log.routine, this.templateFor(dayKey));
       if (routine === log.routine) continue;
       this.update(dayKey, (current) => ({ ...current, routine }));
     }
@@ -353,6 +394,7 @@ export class DayLogStore {
     return {
       settings: this.currentSettings,
       template: this.currentTemplate,
+      offDayTemplate: this.currentOffDayTemplate,
       offlineTasks: this.currentOfflineTasks,
       deadlines: this.currentDeadlines,
     };
@@ -395,7 +437,18 @@ export class DayLogStore {
       this.currentTemplate = migrateRoutineTemplate(meta.template, this.now());
       this.enqueue(() => this.adapter.put('meta', TEMPLATE_KEY, this.currentTemplate));
       // Same rule as a local edit: today follows the template immediately.
-      this.applyTemplateFromToday(this.currentTemplate);
+      this.applyTemplateFromToday();
+      changed = true;
+    }
+    if (
+      meta.offDayTemplate !== undefined &&
+      meta.offDayTemplate.updatedAt > this.currentOffDayTemplate.updatedAt
+    ) {
+      this.currentOffDayTemplate = migrateOffDayTemplate(meta.offDayTemplate, this.now());
+      this.enqueue(() =>
+        this.adapter.put('meta', OFF_DAY_TEMPLATE_KEY, this.currentOffDayTemplate),
+      );
+      this.applyTemplateFromToday();
       changed = true;
     }
     if (
@@ -423,6 +476,7 @@ export class DayLogStore {
 export interface MetaSnapshot {
   readonly settings: Settings;
   readonly template: RoutineTemplate;
+  readonly offDayTemplate: RoutineTemplate;
   readonly offlineTasks: OfflineTaskList;
   readonly deadlines: DeadlineList;
 }

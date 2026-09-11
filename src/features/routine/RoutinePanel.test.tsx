@@ -12,6 +12,7 @@ const MIN = 60_000;
 const SUNDAY = new Date(2026, 8, 6, 10, 0); // workday
 const FRIDAY = new Date(2026, 8, 11, 10, 0); // off day
 const SUNDAY_KEY: DayKey = parseDayKey('2026-09-06');
+const FRIDAY_KEY: DayKey = parseDayKey('2026-09-11');
 
 let store: DayLogStore;
 let user: ReturnType<typeof userEvent.setup>;
@@ -215,18 +216,103 @@ describe('off-day view', () => {
     vi.setSystemTime(FRIDAY);
   });
 
-  // Brief section 2: no routine, no work block, no pressure on Fri/Sat.
-  it('shows no schedule', async () => {
+  // Brief section 2: no work block and no pressure on Fri/Sat. The off day gets
+  // its own routine, not the workday schedule.
+  it('shows the off-day routine, not the workday one', async () => {
     await renderDay();
-    expect(screen.getByText(/off day/i)).toBeInTheDocument();
+    const routine = screen.getByRole('region', { name: /today/i });
+    expect(within(routine).getByText('Off day')).toBeInTheDocument();
+    expect(within(routine).getByText('Free time')).toBeInTheDocument();
     expect(screen.queryByText('Transition nap')).not.toBeInTheDocument();
     expect(screen.queryByText('Workday start')).not.toBeInTheDocument();
+    expect(screen.queryByText('Interview prep')).not.toBeInTheDocument();
   });
 
-  it('does not offer lunch or the sleep flag', async () => {
+  it('says nothing is counted against the day', async () => {
+    await renderDay();
+    expect(screen.getByText(/nothing counted against you/i)).toBeInTheDocument();
+  });
+
+  // Lunch belongs to the 8-hour window, which off days do not have.
+  it('does not offer lunch', async () => {
     await renderDay();
     expect(screen.queryByRole('button', { name: /start lunch/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: /broken sleep/i })).not.toBeInTheDocument();
+  });
+
+  // Broken sleep is a fact about the night, not about work.
+  it('still records broken sleep and a note', async () => {
+    await renderDay();
+    await user.click(screen.getByRole('checkbox', { name: /broken sleep/i }));
+    expect(store.get(FRIDAY_KEY)?.sleepDebt).toBe(true);
+  });
+
+  it('tracks off-day blocks', async () => {
+    await renderDay();
+    await user.click(screen.getByRole('checkbox', { name: /free time/i }));
+
+    const block = store.get(FRIDAY_KEY)?.routine.find((b) => b.id === 'offday-free');
+    expect(block?.completedAt).not.toBeNull();
+  });
+
+  // Brief section 2: no work block on an off day, so nothing is selectable.
+  it('offers no timer task', async () => {
+    await renderDay();
+    const timer = screen.getByRole('region', { name: /pomodoro timer/i });
+    expect(within(timer).queryByRole('button', { name: 'Free time' })).not.toBeInTheDocument();
+  });
+
+  describe('editing', () => {
+    it('is available', async () => {
+      await renderDay();
+      expect(screen.getByRole('button', { name: /edit routine/i })).toBeInTheDocument();
+    });
+
+    it('edits the off-day routine, not the workday one', async () => {
+      await renderDay();
+      await user.click(screen.getByRole('button', { name: /edit routine/i }));
+
+      const field = screen.getByRole('textbox', { name: /name of gym/i });
+      await user.clear(field);
+      await user.type(field, 'Swim');
+
+      expect(store.offDayTemplate.blocks.find((b) => b.id === 'offday-gym')?.name).toBe('Swim');
+      // The workday routine is untouched.
+      expect(store.template.blocks.find((b) => b.id === 'interview-prep')?.name).toBe(
+        'Interview prep',
+      );
+    });
+
+    it('applies the edit to today straight away', async () => {
+      await renderDay();
+      await user.click(screen.getByRole('button', { name: /edit routine/i }));
+
+      const field = screen.getByRole('textbox', { name: /name of gym/i });
+      await user.clear(field);
+      await user.type(field, 'Swim');
+      await user.click(screen.getByRole('button', { name: /done editing/i }));
+
+      const routine = screen.getByRole('region', { name: /today/i });
+      expect(within(routine).getByText('Swim')).toBeInTheDocument();
+    });
+
+    it('adds a block', async () => {
+      await renderDay();
+      await user.click(screen.getByRole('button', { name: /edit routine/i }));
+
+      await user.type(screen.getByRole('textbox', { name: /new block name/i }), 'Long walk');
+      await user.click(screen.getByRole('button', { name: /^add$/i }));
+      await user.click(screen.getByRole('button', { name: /done editing/i }));
+
+      const routine = screen.getByRole('region', { name: /today/i });
+      expect(within(routine).getByText('Long walk')).toBeInTheDocument();
+    });
+
+    // There is no work on an off day, so the flag would be meaningless.
+    it('offers no work-item toggle', async () => {
+      await renderDay();
+      await user.click(screen.getByRole('button', { name: /edit routine/i }));
+      expect(screen.queryByLabelText(/is work inside the 8-hour block/i)).not.toBeInTheDocument();
+    });
   });
 });
 

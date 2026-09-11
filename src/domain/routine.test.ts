@@ -2,14 +2,17 @@ import { describe, expect, it } from 'vitest';
 import {
   addBlock,
   completedBlockCount,
+  defaultOffDayRoutineTemplate,
   defaultRoutineTemplate,
   formatTimeOfDay,
+  migrateOffDayTemplate,
   moveBlock,
   parseTimeOfDay,
   removeBlock,
   snapshotRoutine,
   defaultTask,
   reconcileRoutine,
+  sanitizeOffDayTemplate,
   toggleBlockCompletion,
   updateBlock,
   workBlocks,
@@ -310,5 +313,72 @@ describe('reconcileRoutine', () => {
     const next = reconcileRoutine([], template());
     expect(next.map((b) => b.id)).toEqual(template().blocks.map((b) => b.id));
     expect(next.every((b) => b.completedAt === null)).toBe(true);
+  });
+});
+
+describe('the off-day routine template', () => {
+  const offDay = () => defaultOffDayRoutineTemplate(NOW);
+
+  it('is not empty — an off day is still a day', () => {
+    expect(offDay().blocks.length).toBeGreaterThan(0);
+  });
+
+  // Brief section 2: no work block on an off day.
+  it('contains no work blocks', () => {
+    expect(offDay().blocks.every((b) => !b.isWorkBlock)).toBe(true);
+    expect(workBlocks(snapshotRoutine(offDay()))).toEqual([]);
+    expect(defaultTask(snapshotRoutine(offDay()))).toBeUndefined();
+  });
+
+  // Brief section 2 notes Friday has no gym and Saturday does.
+  it('notes that the gym is Saturday only', () => {
+    const gym = offDay().blocks.find((b) => b.id === 'offday-gym');
+    expect(gym?.note).toMatch(/saturday/i);
+  });
+
+  it('shares no block ids with the workday routine', () => {
+    const workdayIds = new Set(defaultRoutineTemplate(NOW).blocks.map((b) => b.id));
+    expect(offDay().blocks.some((b) => workdayIds.has(b.id))).toBe(false);
+  });
+});
+
+describe('sanitizeOffDayTemplate', () => {
+  it('strips a work flag', () => {
+    const contaminated = updateBlock(
+      defaultOffDayRoutineTemplate(NOW),
+      'offday-free',
+      { isWorkBlock: true },
+      LATER,
+    );
+    expect(sanitizeOffDayTemplate(contaminated).blocks.every((b) => !b.isWorkBlock)).toBe(true);
+  });
+
+  it('returns the same template when there is nothing to strip', () => {
+    const clean = defaultOffDayRoutineTemplate(NOW);
+    expect(sanitizeOffDayTemplate(clean)).toBe(clean);
+  });
+});
+
+describe('migrateOffDayTemplate', () => {
+  it('falls back to the off-day default, not the workday one', () => {
+    const migrated = migrateOffDayTemplate(undefined, NOW);
+    expect(migrated.blocks.some((b) => b.id === 'offday-free')).toBe(true);
+    expect(migrated.blocks.some((b) => b.id === 'interview-prep')).toBe(false);
+  });
+
+  it('falls back when the stored record has no blocks', () => {
+    expect(migrateOffDayTemplate({ updatedAt: NOW }, NOW).blocks.length).toBeGreaterThan(0);
+  });
+
+  it('keeps stored blocks but never their work flags', () => {
+    const stored = {
+      updatedAt: NOW,
+      blocks: [
+        { id: 'a', name: 'Walk', startMinute: null, durationMinutes: null, note: '', isWorkBlock: true },
+      ],
+    };
+    const migrated = migrateOffDayTemplate(stored, LATER);
+    expect(migrated.blocks[0]?.name).toBe('Walk');
+    expect(migrated.blocks[0]?.isWorkBlock).toBe(false);
   });
 });

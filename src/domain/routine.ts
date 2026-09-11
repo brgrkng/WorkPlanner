@@ -128,6 +128,20 @@ export const DEFAULT_WORK_BLOCK_IDS: ReadonlySet<string> = new Set([
  * day log the template is not a historical record, so filling the flag in is
  * simply repair, not rewriting the past.
  */
+/** Off-day counterpart of `migrateRoutineTemplate`. Falls back to the off-day
+ *  default, and never lets a work flag through. */
+export function migrateOffDayTemplate(raw: unknown, now: number): RoutineTemplate {
+  if (typeof raw !== 'object' || raw === null) return defaultOffDayRoutineTemplate(now);
+  const record = raw as Record<string, unknown>;
+  if (!Array.isArray(record.blocks)) return defaultOffDayRoutineTemplate(now);
+
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    updatedAt: typeof record.updatedAt === 'number' ? record.updatedAt : now,
+    blocks: (record.blocks as RoutineBlock[]).map((block) => ({ ...block, isWorkBlock: false })),
+  };
+}
+
 export function migrateRoutineTemplate(raw: unknown, now: number): RoutineTemplate {
   if (typeof raw !== 'object' || raw === null) return defaultRoutineTemplate(now);
   const record = raw as Record<string, unknown>;
@@ -145,6 +159,61 @@ export function migrateRoutineTemplate(raw: unknown, now: number): RoutineTempla
     schemaVersion: SCHEMA_VERSION,
     updatedAt: typeof record.updatedAt === 'number' ? record.updatedAt : now,
     blocks,
+  };
+}
+
+/**
+ * The starting off-day routine for Friday and Saturday.
+ *
+ * Off days are not empty days — there is still a morning, and Saturday has the
+ * gym while Friday does not (brief section 2). What an off-day routine must
+ * never contain is a work block: no work is scheduled on these days, nothing is
+ * allocated, and no streak depends on them. `sanitizeOffDayTemplate` enforces
+ * that however the template is edited.
+ *
+ * Deliberately short — it is a starting point the user is expected to rewrite.
+ */
+export function defaultOffDayRoutineTemplate(now: number): RoutineTemplate {
+  const block = (
+    id: string,
+    name: string,
+    durationMinutes: number | null = null,
+    note = '',
+  ): RoutineBlock => ({
+    id,
+    name,
+    startMinute: null,
+    durationMinutes,
+    note,
+    isWorkBlock: false,
+  });
+
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    updatedAt: now,
+    blocks: [
+      block('offday-wake', 'Wake, skincare, coffee'),
+      block('offday-gym', 'Gym', null, 'Saturday only'),
+      block('offday-tea', 'Tea', 10),
+      block('offday-shower', 'Shower'),
+      block('offday-free', 'Free time'),
+      block('offday-wind-down', 'PM skincare, wind-down, sleep'),
+    ],
+  };
+}
+
+/**
+ * Strips work flags from an off-day template.
+ *
+ * Brief section 2 is explicit that off days have no work block. Enforcing it
+ * here rather than in the editor means it holds no matter how the template got
+ * here — a hand-edited store, a sync from another device, an older build.
+ */
+export function sanitizeOffDayTemplate(template: RoutineTemplate): RoutineTemplate {
+  if (!template.blocks.some((block) => block.isWorkBlock)) return template;
+  return {
+    ...template,
+    blocks: template.blocks.map((block) => ({ ...block, isWorkBlock: false })),
   };
 }
 

@@ -34,9 +34,26 @@ describe('routine snapshots', () => {
     expect(log.routine.map((b) => b.id)).toEqual(store.template.blocks.map((b) => b.id));
   });
 
-  // Brief section 2: off days must not show the workday schedule at all.
-  it('gives an off day no routine', () => {
-    expect(store.ensureDay(FRIDAY).routine).toEqual([]);
+  // Brief section 2: an off day must not get the workday schedule. It gets its
+  // own routine instead — a different day, not the workday minus the work.
+  it('gives an off day the off-day routine, not the workday one', () => {
+    const friday = store.ensureDay(FRIDAY);
+    expect(friday.routine.length).toBeGreaterThan(0);
+    expect(friday.routine.map((b) => b.id)).toEqual(
+      store.offDayTemplate.blocks.map((b) => b.id),
+    );
+    expect(friday.routine.some((b) => b.id === 'interview-prep')).toBe(false);
+  });
+
+  // Brief section 2: no work block on an off day, so nothing on one is ever
+  // selectable as a timer task.
+  it('never marks an off-day block as work', () => {
+    expect(store.ensureDay(FRIDAY).routine.every((b) => !b.isWorkBlock)).toBe(true);
+  });
+
+  it('still allocates nothing for an off day', () => {
+    expect(store.ensureDay(FRIDAY).allocatedMinutes).toBe(0);
+    expect(store.ensureDay(FRIDAY).kind).toBe('offday');
   });
 });
 
@@ -159,12 +176,78 @@ describe('template edits apply from today onward', () => {
     expect(store.ensureDay(MONDAY).routine.find((b) => b.id === 'tea')?.name).toBe('Coffee');
   });
 
-  // Brief section 2: Fri/Sat have no routine, and an edit must not give them one.
-  it('does not give an off day a routine', () => {
-    store.ensureDay(FRIDAY);
+  // The two routines are independent: editing one must not disturb the other.
+  it('does not touch an off day when the workday routine changes', () => {
+    const before = store.ensureDay(FRIDAY).routine;
     store.setTemplate(updateBlock(store.template, 'tea', { name: 'Coffee' }, NOW));
 
-    expect(store.get(FRIDAY)?.routine).toEqual([]);
+    expect(store.get(FRIDAY)?.routine).toBe(before);
+  });
+
+  it('does not touch a workday when the off-day routine changes', () => {
+    const before = store.ensureDay(SUNDAY).routine;
+    store.setOffDayTemplate(
+      updateBlock(store.offDayTemplate, 'offday-tea', { name: 'Chai' }, NOW),
+    );
+
+    expect(store.get(SUNDAY)?.routine).toBe(before);
+  });
+});
+
+describe('the off-day routine', () => {
+  // `NOW` is a Sunday, so Friday is in the future here — reconciled, not frozen.
+  it('applies an edit to a future off day immediately', () => {
+    store.ensureDay(FRIDAY);
+    store.setOffDayTemplate(
+      updateBlock(store.offDayTemplate, 'offday-gym', { name: 'Swim' }, NOW),
+    );
+
+    expect(store.get(FRIDAY)?.routine.find((b) => b.id === 'offday-gym')?.name).toBe('Swim');
+  });
+
+  it('keeps ticks on an off day across an edit', () => {
+    store.ensureDay(FRIDAY);
+    store.update(FRIDAY, (log) => ({
+      ...log,
+      routine: toggleBlockCompletion(log.routine, 'offday-gym', NOW),
+    }));
+
+    store.setOffDayTemplate(
+      updateBlock(store.offDayTemplate, 'offday-tea', { name: 'Chai' }, NOW),
+    );
+    expect(store.get(FRIDAY)?.routine.find((b) => b.id === 'offday-gym')?.completedAt).toBe(NOW);
+  });
+
+  it('strips a work flag however it got set', () => {
+    store.setOffDayTemplate(
+      updateBlock(store.offDayTemplate, 'offday-free', { isWorkBlock: true }, NOW),
+    );
+
+    expect(store.offDayTemplate.blocks.every((b) => !b.isWorkBlock)).toBe(true);
+    expect(store.ensureDay(FRIDAY).routine.every((b) => !b.isWorkBlock)).toBe(true);
+  });
+
+  it('survives a restart', async () => {
+    store.setOffDayTemplate(
+      updateBlock(store.offDayTemplate, 'offday-gym', { name: 'Swim' }, NOW),
+    );
+    await store.settled();
+
+    const reopened = new DayLogStore(adapter, { now: () => NOW });
+    await reopened.hydrate();
+    expect(reopened.offDayTemplate.blocks.find((b) => b.id === 'offday-gym')?.name).toBe('Swim');
+  });
+
+  it('falls back to the default when nothing was ever stored', async () => {
+    const reopened = new DayLogStore(new MemoryAdapter(), { now: () => NOW });
+    await reopened.hydrate();
+    expect(reopened.offDayTemplate.blocks.length).toBeGreaterThan(0);
+    expect(reopened.offDayTemplate.blocks.every((b) => !b.isWorkBlock)).toBe(true);
+  });
+
+  it('routes each day to its own template', () => {
+    expect(store.templateFor(FRIDAY)).toBe(store.offDayTemplate);
+    expect(store.templateFor(SUNDAY)).toBe(store.template);
   });
 
   // An edit that changes nothing must not mark days dirty for sync.

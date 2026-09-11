@@ -8,7 +8,12 @@ import {
   SCHEMA_VERSION,
   WORK_STREAK_THRESHOLD_MINUTES,
 } from './constants';
-import { defaultRoutineTemplate, snapshotRoutine, type RoutineTemplate } from './routine';
+import {
+  defaultOffDayRoutineTemplate,
+  defaultRoutineTemplate,
+  snapshotRoutine,
+  type RoutineTemplate,
+} from './routine';
 import { isOffDay, type DayKey } from './time/dayKey';
 import type { DayLog, Settings } from './types';
 
@@ -34,9 +39,14 @@ export function defaultSettings(): Settings {
  */
 export interface CreateDayLogOptions {
   readonly allocatedMinutesPerWorkday?: number;
-  /** Snapshotted into the day. Off days get no routine — the brief says they
-   *  must not show the workday schedule at all (section 2). */
+  /** Snapshotted into a workday. */
   readonly template?: RoutineTemplate;
+  /**
+   * Snapshotted into a Friday or Saturday. A separate template, because an off
+   * day is a different day — not the workday schedule with the work removed.
+   * Off days still allocate nothing and never affect the work streak.
+   */
+  readonly offDayTemplate?: RoutineTemplate;
 }
 
 export function createDayLog(
@@ -47,7 +57,9 @@ export function createDayLog(
   const offday = isOffDay(dayKey);
   const allocatedMinutesPerWorkday =
     options.allocatedMinutesPerWorkday ?? DEFAULT_ALLOCATED_MINUTES_PER_WORKDAY;
-  const template = options.template ?? defaultRoutineTemplate(now);
+  const template = offday
+    ? (options.offDayTemplate ?? defaultOffDayRoutineTemplate(now))
+    : (options.template ?? defaultRoutineTemplate(now));
 
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -55,7 +67,7 @@ export function createDayLog(
     kind: offday ? 'offday' : 'workday',
     excused: false,
     allocatedMinutes: offday ? 0 : allocatedMinutesPerWorkday,
-    routine: offday ? [] : snapshotRoutine(template),
+    routine: snapshotRoutine(template),
     workSessions: [],
     offlineReports: [],
     lunchMinutes: 0,

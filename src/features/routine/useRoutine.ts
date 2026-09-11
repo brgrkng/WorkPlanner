@@ -146,15 +146,26 @@ export function useRoutine(): RoutineView {
     [store, today],
   );
 
-  // --- template editing: affects future days only ----------------------------
+  // --- template editing -----------------------------------------------------
+  // Every edit goes through the template that governs today, so the same editor
+  // drives the workday routine on Sun-Thu and the off-day routine on Fri/Sat
+  // without either being able to disturb the other.
+  const liveTemplate = offDay ? store.offDayTemplate : store.template;
+  const saveTemplate = useCallback(
+    (next: RoutineTemplate) => {
+      if (offDay) store.setOffDayTemplate(next);
+      else store.setTemplate(next);
+    },
+    [offDay, store],
+  );
 
   const addRoutineBlock = useCallback(
     (name: string) => {
       const trimmed = name.trim();
       if (trimmed === '') return;
-      store.setTemplate(
+      saveTemplate(
         addBlock(
-          store.template,
+          liveTemplate,
           {
             id: newId(),
             name: trimmed,
@@ -167,28 +178,28 @@ export function useRoutine(): RoutineView {
         ),
       );
     },
-    [store],
+    [liveTemplate, saveTemplate],
   );
 
   const editRoutineBlock = useCallback(
     (blockId: string, patch: Partial<Omit<RoutineBlock, 'id'>>) => {
-      store.setTemplate(updateBlock(store.template, blockId, patch, Date.now()));
+      saveTemplate(updateBlock(liveTemplate, blockId, patch, Date.now()));
     },
-    [store],
+    [liveTemplate, saveTemplate],
   );
 
   const removeRoutineBlock = useCallback(
     (blockId: string) => {
-      store.setTemplate(removeBlock(store.template, blockId, Date.now()));
+      saveTemplate(removeBlock(liveTemplate, blockId, Date.now()));
     },
-    [store],
+    [liveTemplate, saveTemplate],
   );
 
   const moveRoutineBlock = useCallback(
     (blockId: string, delta: number) => {
-      store.setTemplate(moveBlock(store.template, blockId, delta, Date.now()));
+      saveTemplate(moveBlock(liveTemplate, blockId, delta, Date.now()));
     },
-    [store],
+    [liveTemplate, saveTemplate],
   );
 
   const setCurrentProject = useCallback(
@@ -204,7 +215,7 @@ export function useRoutine(): RoutineView {
     isOffDay: offDay,
     routine: log.routine,
     completedCount: completedBlockCount(log.routine),
-    template: store.template,
+    template: liveTemplate,
     currentProject: store.settings.currentProject,
     sleepDebt: log.sleepDebt,
     note: log.note,

@@ -17,14 +17,24 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
   return (
     <div className={styles.editor}>
       <p className={styles.editorNote}>
-        Changes apply to today straight away and carry forward. Anything already ticked off stays
-        ticked. Days before today keep the routine they were actually run against. Blocks marked{' '}
-        <strong>work</strong> are the ones the timer can be pointed at.
+        {routine.isOffDay
+          ? 'This is the Friday and Saturday routine, kept separate from the workday one. Changes apply to today straight away and carry forward; days before today keep the routine they were actually run against.'
+          : null}
+        {!routine.isOffDay ? (
+          <>
+            Changes apply to today straight away and carry forward. Anything already ticked off
+            stays ticked. Days before today keep the routine they were actually run against. Blocks
+            marked <strong>work</strong> are the ones the timer can be pointed at.
+          </>
+        ) : null}
       </p>
 
       <ul className={styles.editorList}>
         {routine.template.blocks.map((block, index) => (
-          <li key={block.id} className={styles.editorRow}>
+          <li
+            key={block.id}
+            className={routine.isOffDay ? styles.editorRowOffDay : styles.editorRow}
+          >
             <input
               type="text"
               className={styles.editorName}
@@ -56,17 +66,21 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
                 })
               }
             />
-            <label className={styles.workFlag} title="Selectable as a timer task">
-              <input
-                type="checkbox"
-                checked={block.isWorkBlock}
-                aria-label={`${block.name} is work inside the 8-hour block`}
-                onChange={(event) =>
-                  routine.editRoutineBlock(block.id, { isWorkBlock: event.target.checked })
-                }
-              />
-              <span>work</span>
-            </label>
+            {/* No work block exists on an off day (brief section 2), so the
+                flag would be meaningless there. */}
+            {!routine.isOffDay ? (
+              <label className={styles.workFlag} title="Selectable as a timer task">
+                <input
+                  type="checkbox"
+                  checked={block.isWorkBlock}
+                  aria-label={`${block.name} is work inside the 8-hour block`}
+                  onChange={(event) =>
+                    routine.editRoutineBlock(block.id, { isWorkBlock: event.target.checked })
+                  }
+                />
+                <span>work</span>
+              </label>
+            ) : null}
             <span className={styles.editorActions}>
               <button
                 type="button"
