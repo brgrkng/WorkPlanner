@@ -318,7 +318,7 @@ describe('sleep debt self-report', () => {
 });
 
 describe('editing the routine from the UI', () => {
-  it('renames a block for future days without touching today', async () => {
+  it('renames a block on today straight away', async () => {
     await renderDay();
     await user.click(screen.getByRole('button', { name: /edit routine/i }));
 
@@ -327,14 +327,54 @@ describe('editing the routine from the UI', () => {
     await user.type(nameField, 'Coffee');
 
     expect(store.template.blocks.find((b) => b.id === 'tea')?.name).toBe('Coffee');
-    // Today keeps the routine it was created with (brief section 7).
-    expect(store.get(SUNDAY_KEY)?.routine.find((b) => b.id === 'tea')?.name).toBe('Tea');
+    // The whole point of the change: no waiting for tomorrow.
+    expect(store.get(SUNDAY_KEY)?.routine.find((b) => b.id === 'tea')?.name).toBe('Coffee');
   });
 
-  it('tells the user that edits apply to future days', async () => {
+  // The edited name has to be on screen, not just in the store.
+  it('shows the renamed block in today-s routine immediately', async () => {
     await renderDay();
     await user.click(screen.getByRole('button', { name: /edit routine/i }));
-    expect(screen.getByText(/changes apply to future days/i)).toBeInTheDocument();
+
+    const nameField = screen.getByRole('textbox', { name: /name of tea/i });
+    await user.clear(nameField);
+    await user.type(nameField, 'Coffee');
+
+    await user.click(screen.getByRole('button', { name: /done editing/i }));
+    const routine = screen.getByRole('region', { name: /today/i });
+    expect(within(routine).getByText('Coffee')).toBeInTheDocument();
+    expect(within(routine).queryByText('Tea')).not.toBeInTheDocument();
+  });
+
+  it('adds a block to today immediately', async () => {
+    await renderDay();
+    await user.click(screen.getByRole('button', { name: /edit routine/i }));
+
+    await user.type(screen.getByRole('textbox', { name: /new block name/i }), 'Reading');
+    await user.click(screen.getByRole('button', { name: /^add$/i }));
+    await user.click(screen.getByRole('button', { name: /done editing/i }));
+
+    const routine = screen.getByRole('region', { name: /today/i });
+    expect(within(routine).getByText('Reading')).toBeInTheDocument();
+  });
+
+  it('keeps a block that is already ticked off ticked', async () => {
+    await renderDay();
+    await user.click(screen.getByRole('checkbox', { name: /transition nap/i }));
+
+    await user.click(screen.getByRole('button', { name: /edit routine/i }));
+    const nameField = screen.getByRole('textbox', { name: /name of tea/i });
+    await user.clear(nameField);
+    await user.type(nameField, 'Coffee');
+    await user.click(screen.getByRole('button', { name: /done editing/i }));
+
+    expect(screen.getByRole('checkbox', { name: /transition nap/i })).toBeChecked();
+  });
+
+  it('tells the user that edits apply today and carry forward', async () => {
+    await renderDay();
+    await user.click(screen.getByRole('button', { name: /edit routine/i }));
+    expect(screen.getByText(/apply to today straight away/i)).toBeInTheDocument();
   });
 
   it('adds a block', async () => {

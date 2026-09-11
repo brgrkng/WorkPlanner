@@ -327,3 +327,24 @@ describe('scheduling', () => {
     engine.stop();
   });
 });
+
+describe('a template arriving from the server', () => {
+  // Same rule as a local edit: today follows the template, past days do not.
+  it('is applied to today and migrated on the way in', async () => {
+    const today = store.ensureDay(SUNDAY);
+    expect(today.routine.find((b) => b.id === 'tea')?.name).toBe('Tea');
+
+    remote.meta = {
+      template: {
+        schemaVersion: 4,
+        updatedAt: store.template.updatedAt + 1_000,
+        blocks: store.template.blocks.map((b) =>
+          b.id === 'tea' ? { ...b, name: 'Coffee' } : b,
+        ),
+      },
+    };
+
+    await engine.syncNow();
+    expect(store.get(SUNDAY)?.routine.find((b) => b.id === 'tea')?.name).toBe('Coffee');
+  });
+});

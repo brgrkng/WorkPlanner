@@ -9,6 +9,7 @@ import {
   removeBlock,
   snapshotRoutine,
   defaultTask,
+  reconcileRoutine,
   toggleBlockCompletion,
   updateBlock,
   workBlocks,
@@ -223,5 +224,91 @@ describe('work blocks', () => {
   it('pick up a block the user marks as work', () => {
     const marked = updateBlock(template(), 'gaming', { isWorkBlock: true }, LATER);
     expect(workBlocks(snapshotRoutine(marked)).map((b) => b.id)).toContain('gaming');
+  });
+});
+
+describe('reconcileRoutine', () => {
+  const base = () => snapshotRoutine(template());
+
+  it('takes a rename from the template', () => {
+    const edited = updateBlock(template(), 'tea', { name: 'Coffee' }, LATER);
+    const next = reconcileRoutine(base(), edited);
+    expect(next.find((b) => b.id === 'tea')?.name).toBe('Coffee');
+  });
+
+  it('takes a time, duration and work-flag change', () => {
+    let edited = updateBlock(template(), 'work-start', { startMinute: 7 * 60 }, LATER);
+    edited = updateBlock(edited, 'nap', { durationMinutes: 30 }, LATER);
+    edited = updateBlock(edited, 'gaming', { isWorkBlock: true }, LATER);
+
+    const next = reconcileRoutine(base(), edited);
+    expect(next.find((b) => b.id === 'work-start')?.startMinute).toBe(7 * 60);
+    expect(next.find((b) => b.id === 'nap')?.durationMinutes).toBe(30);
+    expect(next.find((b) => b.id === 'gaming')?.isWorkBlock).toBe(true);
+  });
+
+  // The reason reconcile exists rather than just re-snapshotting.
+  it('preserves completion by block id', () => {
+    const withTick = toggleBlockCompletion(base(), 'nap', NOW);
+    const edited = updateBlock(template(), 'tea', { name: 'Coffee' }, LATER);
+
+    const next = reconcileRoutine(withTick, edited);
+    expect(next.find((b) => b.id === 'nap')?.completedAt).toBe(NOW);
+  });
+
+  it('preserves completion even when the block itself was renamed', () => {
+    const withTick = toggleBlockCompletion(base(), 'tea', NOW);
+    const edited = updateBlock(template(), 'tea', { name: 'Coffee' }, LATER);
+
+    const next = reconcileRoutine(withTick, edited);
+    expect(next.find((b) => b.id === 'tea')?.completedAt).toBe(NOW);
+  });
+
+  it('adds a new block unticked', () => {
+    const edited = addBlock(template(), block('reading', 'Reading'), LATER);
+    const next = reconcileRoutine(base(), edited);
+    expect(next.find((b) => b.id === 'reading')?.completedAt).toBeNull();
+  });
+
+  it('drops a removed block and its tick', () => {
+    const withTick = toggleBlockCompletion(base(), 'gaming', NOW);
+    const next = reconcileRoutine(withTick, removeBlock(template(), 'gaming', LATER));
+    expect(next.some((b) => b.id === 'gaming')).toBe(false);
+  });
+
+  it('follows the template order', () => {
+    const reordered = moveBlock(template(), 'project-work', -4, LATER);
+    const next = reconcileRoutine(base(), reordered);
+    expect(next.map((b) => b.id)).toEqual(reordered.blocks.map((b) => b.id));
+  });
+
+  // Identity return: an edit elsewhere must not dirty every day for sync.
+  it('returns the same array when nothing would change', () => {
+    const original = base();
+    expect(reconcileRoutine(original, template())).toBe(original);
+  });
+
+  it('returns the same array when only the template timestamp moved', () => {
+    const original = base();
+    expect(reconcileRoutine(original, { ...template(), updatedAt: LATER })).toBe(original);
+  });
+
+  it('does not return the same array when a tick would be preserved but order changed', () => {
+    const withTick = toggleBlockCompletion(base(), 'nap', NOW);
+    const reordered = moveBlock(template(), 'nap', 3, LATER);
+    expect(reconcileRoutine(withTick, reordered)).not.toBe(withTick);
+  });
+
+  it('never mutates the routine it was given', () => {
+    const original = base();
+    const snapshot = JSON.stringify(original);
+    reconcileRoutine(original, removeBlock(template(), 'tea', LATER));
+    expect(JSON.stringify(original)).toBe(snapshot);
+  });
+
+  it('rebuilds from the template when the day had no routine at all', () => {
+    const next = reconcileRoutine([], template());
+    expect(next.map((b) => b.id)).toEqual(template().blocks.map((b) => b.id));
+    expect(next.every((b) => b.completedAt === null)).toBe(true);
   });
 });

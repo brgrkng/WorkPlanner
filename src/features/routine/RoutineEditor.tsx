@@ -17,9 +17,9 @@ export function RoutineEditor({ routine }: { readonly routine: RoutineView }) {
   return (
     <div className={styles.editor}>
       <p className={styles.editorNote}>
-        Changes apply to future days. Days already logged, including today, keep the routine they
-        were created with. Blocks marked <strong>work</strong> are the ones the timer can be
-        pointed at.
+        Changes apply to today straight away and carry forward. Anything already ticked off stays
+        ticked. Days before today keep the routine they were actually run against. Blocks marked{' '}
+        <strong>work</strong> are the ones the timer can be pointed at.
       </p>
 
       <ul className={styles.editorList}>

@@ -1,4 +1,5 @@
 import {
+  compareDayKeys,
   createDayLog,
   dayKeyOf,
   defaultDeadlines,
@@ -7,6 +8,7 @@ import {
   defaultSettings,
   migrateDayLog,
   migrateRoutineTemplate,
+  reconcileRoutine,
   type DayKey,
   type DayLog,
   type DayLogIndex,
@@ -231,12 +233,42 @@ export class DayLogStore {
    * log — the forward-only rule from brief section 7 is enforced here, by the
    * template simply not being part of how a stored day is read.
    */
+  /**
+   * Replaces the routine template and applies it straight away to today and any
+   * later day, preserving what has already been ticked off.
+   *
+   * Applying it immediately is the point: an edit that only showed up tomorrow
+   * required the tab to still be open at the rollover, and was indistinguishable
+   * from the edit having been lost.
+   *
+   * Past days are left exactly as they were. They are the record of what
+   * actually happened, every dashboard number is computed from them, and
+   * rewriting them would silently change history (brief section 7).
+   */
   setTemplate(template: RoutineTemplate): RoutineTemplate {
     this.currentTemplate = template;
     this.metaDirtyFlag = true;
     this.enqueue(() => this.adapter.put('meta', TEMPLATE_KEY, template));
+    this.applyTemplateFromToday(template);
     this.emit();
     return template;
+  }
+
+  private applyTemplateFromToday(template: RoutineTemplate): void {
+    const today = this.today();
+    // Keys snapshotted first: `update` writes back into the cache.
+    for (const dayKey of [...this.cache.keys()]) {
+      if (compareDayKeys(dayKey, today) < 0) continue;
+
+      const log = this.cache.get(dayKey);
+      if (log === undefined) continue;
+      // Off days have no routine at all (brief section 2).
+      if (log.kind === 'offday') continue;
+
+      const routine = reconcileRoutine(log.routine, template);
+      if (routine === log.routine) continue;
+      this.update(dayKey, (current) => ({ ...current, routine }));
+    }
   }
 
   setOfflineTasks(list: OfflineTaskList): OfflineTaskList {
@@ -358,8 +390,12 @@ export class DayLogStore {
       changed = true;
     }
     if (meta.template !== undefined && meta.template.updatedAt > this.currentTemplate.updatedAt) {
-      this.currentTemplate = meta.template;
+      // Migrated, not trusted raw: a template synced from an older build has no
+      // work flags, which would leave the timer with no task to point at.
+      this.currentTemplate = migrateRoutineTemplate(meta.template, this.now());
       this.enqueue(() => this.adapter.put('meta', TEMPLATE_KEY, this.currentTemplate));
+      // Same rule as a local edit: today follows the template immediately.
+      this.applyTemplateFromToday(this.currentTemplate);
       changed = true;
     }
     if (

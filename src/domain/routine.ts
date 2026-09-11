@@ -232,6 +232,55 @@ export function completedBlockCount(routine: readonly RoutineBlockSnapshot[]): n
   return routine.filter((block) => block.completedAt !== null).length;
 }
 
+/**
+ * Brings a day's routine into line with the template, keeping what the user has
+ * already ticked off.
+ *
+ * The template wins on structure — order, names, times, durations, work flags —
+ * and the day's own record wins on completion, matched by block id. A block
+ * added to the template appears unticked; one removed from the template
+ * disappears along with its tick, which is what removing it means.
+ *
+ * Returns the array it was given when nothing would change, so an edit that
+ * touches one day does not dirty every other one for sync.
+ *
+ * Only ever applied to today and later (see `DayLogStore.setTemplate`). Past
+ * days are frozen records of what actually happened and must never be rewritten
+ * — that is brief section 7, and it still holds.
+ */
+export function reconcileRoutine(
+  routine: readonly RoutineBlockSnapshot[],
+  template: RoutineTemplate,
+): readonly RoutineBlockSnapshot[] {
+  const completionById = new Map(routine.map((block) => [block.id, block.completedAt]));
+
+  const next: RoutineBlockSnapshot[] = template.blocks.map((block) => ({
+    id: block.id,
+    name: block.name,
+    startMinute: block.startMinute,
+    durationMinutes: block.durationMinutes,
+    completedAt: completionById.get(block.id) ?? null,
+    isWorkBlock: block.isWorkBlock,
+  }));
+
+  const unchanged =
+    next.length === routine.length &&
+    next.every((block, index) => {
+      const before = routine[index];
+      return (
+        before !== undefined &&
+        before.id === block.id &&
+        before.name === block.name &&
+        before.startMinute === block.startMinute &&
+        before.durationMinutes === block.durationMinutes &&
+        before.completedAt === block.completedAt &&
+        before.isWorkBlock === block.isWorkBlock
+      );
+    });
+
+  return unchanged ? routine : next;
+}
+
 /** The blocks the timer can be pointed at — work inside the 8-hour window. */
 export function workBlocks(
   routine: readonly RoutineBlockSnapshot[],
